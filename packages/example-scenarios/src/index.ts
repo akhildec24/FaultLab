@@ -11,7 +11,6 @@ export const retryStorm: Scenario = {
       id: 'client',
       kind: 'client',
       name: 'Customer',
-      state: 'healthy',
       capacity: 1000,
       latencyMs: 5,
       errorRate: 0,
@@ -21,7 +20,6 @@ export const retryStorm: Scenario = {
       id: 'checkout-api',
       kind: 'service',
       name: 'Checkout API',
-      state: 'healthy',
       capacity: 120,
       latencyMs: 40,
       errorRate: 0.01,
@@ -31,7 +29,6 @@ export const retryStorm: Scenario = {
       id: 'orders-db',
       kind: 'database',
       name: 'Orders DB',
-      state: 'healthy',
       capacity: 80,
       latencyMs: 25,
       errorRate: 0.005,
@@ -42,9 +39,11 @@ export const retryStorm: Scenario = {
     { from: 'client', to: 'checkout-api', latencyMs: 10, packetLoss: 0 },
     { from: 'checkout-api', to: 'orders-db', latencyMs: 10, packetLoss: 0 },
   ],
-  trafficStartRps: 20,
-  trafficTargetRps: 500,
-  trafficRampSeconds: 30,
+  traffic: {
+    startRps: 20,
+    targetRps: 500,
+    rampSeconds: 30,
+  },
   seed: 42,
 }
 

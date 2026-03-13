@@ -102,12 +102,6 @@ mod tests {
     #[test]
     fn events_execute_in_time_order() {
         let mut scheduler = Scheduler::new();
-        let _req = Request {
-            id: 1,
-            origin: "client".into(),
-            created_at: VirtualTime::zero(),
-            retry_count: 0,
-        };
 
         scheduler.schedule(
             VirtualTime(300),

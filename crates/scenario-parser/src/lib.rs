@@ -26,14 +26,18 @@ mod tests {
             "name": "test",
             "nodes": [],
             "connections": [],
-            "traffic_start_rps": 10,
-            "traffic_target_rps": 100,
-            "traffic_ramp_seconds": 30,
+            "traffic": {
+                "start_rps": 10,
+                "target_rps": 100,
+                "ramp_seconds": 30
+            },
             "seed": 42
         }"#;
         let scenario = parse_json(input).unwrap();
         assert_eq!(scenario.name, "test");
         assert_eq!(scenario.seed, 42);
+        assert_eq!(scenario.traffic.start_rps, 10);
+        assert_eq!(scenario.traffic.target_rps, 100);
     }
 
     #[test]

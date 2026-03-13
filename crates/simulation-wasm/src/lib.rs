@@ -3,7 +3,7 @@
 //! This crate exposes a clean JavaScript interface to the Rust simulation
 //! engine via wasm-bindgen. It deliberately hides internal Rust structures.
 
-use simulation_core::{Engine, Metrics, Scenario};
+use simulation_core::{Engine, Metrics, Scenario, TrafficConfig};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -26,9 +26,11 @@ impl Simulation {
                 name: "empty".into(),
                 nodes: vec![],
                 connections: vec![],
-                traffic_start_rps: 0,
-                traffic_target_rps: 0,
-                traffic_ramp_seconds: 0,
+                traffic: TrafficConfig {
+                    start_rps: 0,
+                    target_rps: 0,
+                    ramp_seconds: 0,
+                },
                 seed: 0,
             }),
         }

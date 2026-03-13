@@ -11,38 +11,55 @@ export type ComponentKind =
 
 export type NodeState = 'healthy' | 'degraded' | 'failed' | 'recovering'
 
-export interface Node {
+export type RetryStrategy =
+  | 'immediate'
+  | { fixed: { delay_ms: number } }
+  | { exponential: { base_ms: number; max_delay_ms: number } }
+
+export interface RetryPolicy {
+  strategy: RetryStrategy
+  maxRetries: number
+  jitter: number
+  budget?: number
+}
+
+export interface NodeConfig {
   id: string
   kind: ComponentKind
   name: string
-  state: NodeState
   capacity: number
   latencyMs: number
   errorRate: number
   timeoutMs: number
   queueLimit?: number
   cacheHitRate?: number
+  retryPolicy?: RetryPolicy
 }
 
-export interface Connection {
+export interface ConnectionConfig {
   from: string
   to: string
   latencyMs: number
   packetLoss: number
+  bandwidthRps?: number
+}
+
+export interface TrafficConfig {
+  startRps: number
+  targetRps: number
+  rampSeconds: number
 }
 
 export interface Scenario {
   name: string
-  nodes: Node[]
-  connections: Connection[]
-  trafficStartRps: number
-  trafficTargetRps: number
-  trafficRampSeconds: number
+  nodes: NodeConfig[]
+  connections: ConnectionConfig[]
+  traffic: TrafficConfig
   seed: number
 }
 
 /// The six initial component types with default values.
-export const COMPONENT_DEFAULTS: Record<ComponentKind, Partial<Node>> = {
+export const COMPONENT_DEFAULTS: Record<ComponentKind, Partial<NodeConfig>> = {
   client: { kind: 'client', capacity: 100, latencyMs: 5, errorRate: 0, timeoutMs: 5000 },
   service: { kind: 'service', capacity: 50, latencyMs: 20, errorRate: 0.01, timeoutMs: 1000 },
   queue: { kind: 'queue', capacity: 100, latencyMs: 1, errorRate: 0, timeoutMs: 5000, queueLimit: 100 },
@@ -58,4 +75,10 @@ export const COMPONENT_LABELS: Record<ComponentKind, string> = {
   cache: 'Cache',
   database: 'Database',
   external_api: 'External API',
+}
+
+export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  strategy: 'immediate',
+  maxRetries: 3,
+  jitter: 0,
 }
