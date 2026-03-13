@@ -1,0 +1,279 @@
+/* FaultLab — design tokens
+   GOV.UK-inspired structure, FaultLab's own slate + amber identity */
+
+:root {
+  /* Core */
+  --fl-slate: #1a1a2e;
+  --fl-slate-light: #2a2a3e;
+  --fl-slate-hover: #161627;
+  --fl-white: #ffffff;
+
+  /* Accents */
+  --fl-amber: #f59e0b;
+  --fl-amber-hover: #d97706;
+  --fl-amber-light: #fef3c7;
+  --fl-green: #059669;
+  --fl-green-hover: #047857;
+  --fl-red: #dc2626;
+  --fl-red-hover: #b91c1c;
+  --fl-red-light: #fee2e2;
+
+  /* Greys */
+  --fl-grey-1: #f4f4f5;
+  --fl-grey-2: #d4d4d8;
+  --fl-grey-3: #71717a;
+  --fl-grey-4: #3f3f46;
+
+  /* Semantic */
+  --fl-text: #18181b;
+  --fl-text-secondary: var(--fl-grey-4);
+  --fl-bg: var(--fl-white);
+  --fl-bg-alt: #fafaf9;
+  --fl-border: #d4d4d8;
+  --fl-focus: var(--fl-amber);
+
+  /* Typography */
+  --fl-font: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --fl-font-mono: "JetBrains Mono", "SFMono-Regular", "Menlo", "Consolas", monospace;
+
+  /* Type scale (rem-based, GOV.UK aligned) */
+  --fl-size-14: 0.875rem;   /* 14px */
+  --fl-size-16: 1rem;       /* 16px */
+  --fl-size-19: 1.1875rem;  /* 19px */
+  --fl-size-24: 1.5rem;     /* 24px */
+  --fl-size-27: 1.6875rem;  /* 27px */
+  --fl-size-36: 2.25rem;    /* 36px */
+  --fl-size-48: 3rem;       /* 48px */
+
+  --fl-leading-tight: 1.05;
+  --fl-leading-normal: 1.35;
+  --fl-leading-loose: 1.6;
+
+  /* Spacing scale (multiples of 5px → rem) */
+  --fl-space-1: 0.3125rem;  /* 5px */
+  --fl-space-2: 0.625rem;   /* 10px */
+  --fl-space-3: 0.9375rem;  /* 15px */
+  --fl-space-4: 1.25rem;    /* 20px */
+  --fl-space-5: 1.875rem;   /* 30px */
+  --fl-space-6: 2.5rem;     /* 40px */
+  --fl-space-7: 3.75rem;    /* 60px */
+  --fl-space-8: 5rem;       /* 80px */
+
+  /* Layout */
+  --fl-width-container: 960px;
+  --fl-width-full: 100%;
+
+  /* Borders */
+  --fl-border-width: 2px;
+  --fl-border-radius: 0;
+
+  /* Focus outline */
+  --fl-focus-width: 3px;
+  --fl-focus-offset: 2px;
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--fl-font);
+  font-size: var(--fl-size-19);
+  line-height: var(--fl-leading-normal);
+  color: var(--fl-text);
+  background: var(--fl-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: var(--fl-leading-tight);
+  color: var(--fl-text);
+}
+
+h1 { font-size: var(--fl-size-48); }
+h2 { font-size: var(--fl-size-36); }
+h3 { font-size: var(--fl-size-27); }
+h4 { font-size: var(--fl-size-24); }
+
+p {
+  line-height: var(--fl-leading-loose);
+}
+
+a {
+  color: var(--fl-amber-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+
+a:hover {
+  color: var(--fl-slate);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: var(--fl-focus-width) solid var(--fl-focus);
+  outline-offset: var(--fl-focus-offset);
+  background-color: var(--fl-focus);
+}
+
+/* Layout helpers */
+.fl-container {
+  max-width: var(--fl-width-container);
+  margin: 0 auto;
+  padding: 0 var(--fl-space-4);
+}
+
+.fl-width-full {
+  max-width: var(--fl-width-full);
+}
+
+/* Buttons */
+.fl-button {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--fl-font);
+  font-size: var(--fl-size-19);
+  font-weight: 700;
+  line-height: 1;
+  padding: var(--fl-space-2) var(--fl-space-4);
+  border: var(--fl-border-width) solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.fl-button--primary {
+  background: var(--fl-amber);
+  color: var(--fl-slate);
+}
+
+.fl-button--primary:hover {
+  background: var(--fl-amber-hover);
+  color: var(--fl-white);
+}
+
+.fl-button--secondary {
+  background: transparent;
+  color: var(--fl-slate);
+  border-color: var(--fl-slate);
+}
+
+.fl-button--secondary:hover {
+  background: var(--fl-slate);
+  color: var(--fl-white);
+}
+
+.fl-button--warning {
+  background: var(--fl-red);
+  color: var(--fl-white);
+}
+
+.fl-button--warning:hover {
+  background: var(--fl-red-hover);
+  color: var(--fl-white);
+}
+
+.fl-button--link {
+  background: transparent;
+  color: var(--fl-amber-hover);
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  font-weight: 400;
+}
+
+/* Tags / labels */
+.fl-tag {
+  display: inline-block;
+  font-size: var(--fl-size-14);
+  font-weight: 700;
+  padding: 2px var(--fl-space-2);
+  background: var(--fl-grey-1);
+  color: var(--fl-grey-4);
+  border: 1px solid var(--fl-grey-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fl-tag--blue { background: var(--fl-amber-light); color: var(--fl-amber-hover); border-color: var(--fl-amber); }
+.fl-tag--green { background: #d1fae5; color: var(--fl-green); border-color: var(--fl-green); }
+.fl-tag--red { background: var(--fl-red-light); color: var(--fl-red); border-color: var(--fl-red); }
+.fl-tag--yellow { background: var(--fl-amber-light); color: var(--fl-amber-hover); border-color: var(--fl-amber); }
+
+/* Lists */
+.fl-list {
+  list-style: none;
+  padding: 0;
+}
+
+.fl-list--bullet li {
+  position: relative;
+  padding-left: var(--fl-space-4);
+  line-height: var(--fl-leading-loose);
+}
+
+.fl-list--bullet li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 8px;
+  height: 8px;
+  background: var(--fl-amber);
+}
+
+/* Section spacing */
+.fl-section {
+  padding: var(--fl-space-6) 0;
+}
+
+.fl-section--alt {
+  background: var(--fl-bg-alt);
+}
+
+/* Grid */
+.fl-grid {
+  display: grid;
+  gap: var(--fl-space-4);
+}
+
+.fl-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.fl-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.fl-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 640px) {
+  .fl-grid--2,
+  .fl-grid--3,
+  .fl-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Visually hidden (screen reader) */
+.fl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
