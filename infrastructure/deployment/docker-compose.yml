@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: ../../infrastructure/docker/web.Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../apps/web:/app
+      - /app/node_modules
+    environment:
+      - VITE_SERVER_URL=ws://server:8080
+
+  server:
+    build:
+      context: ../../services/collaboration-server
+      dockerfile: ../../infrastructure/docker/server.Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../services/collaboration-server:/app
+      - /app/build

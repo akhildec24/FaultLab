@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    name: Rust build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - name: Format check
+        run: cargo fmt -- --check
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+      - name: Test
+        run: cargo test
+
+  gleam:
+    name: Gleam build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          gleam-version: "1.17.0"
+          rebar3-version: "3"
+      - name: Build
+        run: gleam build
+        working-directory: services/collaboration-server
+      - name: Test
+        run: gleam test
+        working-directory: services/collaboration-server
+
+  web:
+    name: Web build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+        working-directory: apps/web
+      - name: Type check
+        run: npx vue-tsc --noEmit
+        working-directory: apps/web
+      - name: Build
+        run: npm run build
+        working-directory: apps/web

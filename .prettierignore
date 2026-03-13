@@ -1,0 +1,5 @@
+node_modules/
+dist/
+target/
+services/collaboration-server/build/
+services/collaboration-server/.gleam/

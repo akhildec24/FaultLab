@@ -16,6 +16,10 @@ target/
 *.swo
 .DS_Store
 
+# Gleam build artifacts
+services/collaboration-server/build/
+services/collaboration-server/.gleam/
+
 # Logs
 *.log
 npm-debug.log*
