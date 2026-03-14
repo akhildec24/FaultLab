@@ -139,7 +139,7 @@ impl Engine {
                 let downstream = self.router.downstream(&origin).to_vec();
                 if downstream.is_empty() {
                     // Client with no downstream — complete immediately
-                    self.complete_request(request_id, &origin, true, time);
+                    self.complete_request_success(request_id, time);
                 } else {
                     for (dest_id, _) in &downstream {
                         if let Some(transit) =
@@ -155,7 +155,7 @@ impl Engine {
                             );
                         } else {
                             // Packet lost — mark as failed
-                            self.complete_request(request_id, &origin, false, time);
+                            self.complete_request_failed(request_id);
                         }
                     }
                 }
@@ -220,21 +220,27 @@ impl Engine {
                 node_id,
                 success,
             } => {
-                self.complete_request(request_id, &node_id, success, time);
+                // Ignore stale completion if request already done (timed out)
+                let phase = self.state.requests.get(&request_id).map(|r| r.phase);
+                if phase == Some(RequestPhase::Done) || phase == Some(RequestPhase::PendingRetry) {
+                    return;
+                }
 
-                // If the node has downstream deps, the request would have
-                // already visited them. Now route to next hop or return.
+                // Decrement active requests and update node counters
+                self.finish_processing(request_id, &node_id, success);
+
                 if success {
-                    if !self.state.requests.contains_key(&request_id) {
-                        return;
-                    }
                     if self.router.has_downstream(&node_id) {
-                        // Forward to downstream
+                        // Forward to downstream nodes
                         let downstream = self.router.downstream(&node_id).to_vec();
+                        let mut forwarded = false;
                         for (dest_id, _) in &downstream {
                             if let Some(transit) =
                                 self.router.transit_time(&node_id, dest_id, &mut self.rng)
                             {
+                                if let Some(req) = self.state.requests.get_mut(&request_id) {
+                                    req.phase = RequestPhase::InTransit;
+                                }
                                 self.scheduler.schedule(
                                     time.add(transit),
                                     Event::RequestArrived {
@@ -242,18 +248,20 @@ impl Engine {
                                         node_id: dest_id.clone(),
                                     },
                                 );
+                                forwarded = true;
                             }
                         }
-                    } else {
-                        // No downstream — request is done successfully
-                        if let Some(req) = self.state.requests.get_mut(&request_id) {
-                            req.phase = RequestPhase::Done;
-                            req.outcome = Some(RequestOutcome::Success);
-                            let latency = req.total_latency();
-                            self.state.completed_latencies.push(latency);
+                        if !forwarded {
+                            // All downstream connections lost packets
+                            self.complete_request_failed(request_id);
                         }
-                        self.state.metrics.successful += 1;
+                    } else {
+                        // Leaf node — request is fully done
+                        self.complete_request_success(request_id, time);
                     }
+                } else {
+                    // Failure — try retry or mark done
+                    self.maybe_retry(request_id, &node_id, time);
                 }
             }
 
@@ -274,7 +282,6 @@ impl Engine {
                     node.total_timed_out += 1;
                     node.active_requests = node.active_requests.saturating_sub(1);
                 }
-                self.state.metrics.timed_out += 1;
 
                 self.maybe_retry(request_id, &node_id, time);
             }
@@ -307,6 +314,9 @@ impl Engine {
                             node_id,
                         },
                     );
+                } else {
+                    // Packet lost during retry transit
+                    self.complete_request_failed(request_id);
                 }
             }
 
@@ -384,26 +394,9 @@ impl Engine {
         }
     }
 
-    fn complete_request(
-        &mut self,
-        request_id: u64,
-        node_id: &str,
-        success: bool,
-        time: VirtualTime,
-    ) {
-        if let Some(req) = self.state.requests.get_mut(&request_id) {
-            if req.phase == RequestPhase::Done {
-                return; // Already completed
-            }
-            req.phase = RequestPhase::Done;
-            req.outcome = Some(if success {
-                RequestOutcome::Success
-            } else {
-                RequestOutcome::Failed
-            });
-            let latency = time.millis().saturating_sub(req.created_at.millis());
-            self.state.completed_latencies.push(latency);
-        }
+    /// Finish processing at an intermediate node — decrement active,
+    /// update counters, but don't mark the request as Done.
+    fn finish_processing(&mut self, _request_id: u64, node_id: &str, success: bool) {
         if let Some(node) = self.state.nodes.get_mut(node_id) {
             node.active_requests = node.active_requests.saturating_sub(1);
             if success {
@@ -412,11 +405,28 @@ impl Engine {
                 node.total_failed += 1;
             }
         }
-        if success {
-            self.state.metrics.successful += 1;
-        } else {
-            self.state.metrics.failed += 1;
+    }
+
+    /// Mark a request as successfully completed (terminal state).
+    fn complete_request_success(&mut self, request_id: u64, time: VirtualTime) {
+        if let Some(req) = self.state.requests.get_mut(&request_id) {
+            req.phase = RequestPhase::Done;
+            req.outcome = Some(RequestOutcome::Success);
+            let latency = time.millis().saturating_sub(req.created_at.millis());
+            self.state.completed_latencies.push(latency);
         }
+        self.state.metrics.successful += 1;
+    }
+
+    /// Mark a request as failed (terminal state, no more retries).
+    fn complete_request_failed(&mut self, request_id: u64) {
+        if let Some(req) = self.state.requests.get_mut(&request_id) {
+            req.phase = RequestPhase::Done;
+            if req.outcome.is_none() {
+                req.outcome = Some(RequestOutcome::Failed);
+            }
+        }
+        self.state.metrics.failed += 1;
     }
 
     fn maybe_retry(&mut self, request_id: u64, node_id: &str, time: VirtualTime) {
@@ -430,32 +440,35 @@ impl Engine {
             None => return,
         };
 
-        if req.retry_count >= config.retry_policy.max_retries {
-            // No more retries — mark as done
+        let max_retries = config.retry_policy.max_retries;
+        let budget_exhausted = config.retry_policy.budget.is_some()
+            && self
+                .state
+                .nodes
+                .get(node_id)
+                .is_some_and(|n| n.retry_budget_remaining.is_some_and(|r| r == 0));
+
+        if req.retry_count >= max_retries || budget_exhausted {
+            // No more retries — mark as done with the right metric
+            let was_timeout = req.outcome == Some(RequestOutcome::TimedOut);
             if let Some(req) = self.state.requests.get_mut(&request_id) {
                 req.phase = RequestPhase::Done;
                 if req.outcome.is_none() {
                     req.outcome = Some(RequestOutcome::Failed);
                 }
             }
-            self.state.metrics.failed += 1;
+            if was_timeout {
+                self.state.metrics.timed_out += 1;
+            } else {
+                self.state.metrics.failed += 1;
+            }
             return;
         }
 
-        // Check retry budget
+        // Decrement retry budget if configured
         if config.retry_policy.budget.is_some() {
             if let Some(node) = self.state.nodes.get_mut(node_id) {
                 if let Some(remaining) = node.retry_budget_remaining {
-                    if remaining == 0 {
-                        if let Some(req) = self.state.requests.get_mut(&request_id) {
-                            req.phase = RequestPhase::Done;
-                            if req.outcome.is_none() {
-                                req.outcome = Some(RequestOutcome::Failed);
-                            }
-                        }
-                        self.state.metrics.failed += 1;
-                        return;
-                    }
                     node.retry_budget_remaining = Some(remaining - 1);
                 }
             }
@@ -543,6 +556,143 @@ mod tests {
                 start_rps: 3,
                 target_rps: 3,
                 ramp_seconds: 0,
+            },
+            seed: 42,
+        }
+    }
+
+    fn three_node_scenario() -> Scenario {
+        Scenario {
+            name: "client-service-db".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Customer".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+                NodeConfig {
+                    id: "checkout-api".into(),
+                    kind: ComponentKind::Service,
+                    name: "Checkout API".into(),
+                    capacity: 200,
+                    latency_ms: 20,
+                    error_rate: 0.0,
+                    timeout_ms: 1000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+                NodeConfig {
+                    id: "orders-db".into(),
+                    kind: ComponentKind::Database,
+                    name: "Orders DB".into(),
+                    capacity: 100,
+                    latency_ms: 30,
+                    error_rate: 0.0,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+            ],
+            connections: vec![
+                ConnectionConfig {
+                    from: "client".into(),
+                    to: "checkout-api".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+                ConnectionConfig {
+                    from: "checkout-api".into(),
+                    to: "orders-db".into(),
+                    latency_ms: 5,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+            ],
+            traffic: TrafficConfig {
+                start_rps: 5,
+                target_rps: 5,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        }
+    }
+
+    fn retry_storm_scenario() -> Scenario {
+        Scenario {
+            name: "retry-storm".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Customer".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+                NodeConfig {
+                    id: "checkout-api".into(),
+                    kind: ComponentKind::Service,
+                    name: "Checkout API".into(),
+                    capacity: 120,
+                    latency_ms: 40,
+                    error_rate: 0.01,
+                    timeout_ms: 800,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 3,
+                        jitter: 0.0,
+                        budget: None,
+                    },
+                },
+                NodeConfig {
+                    id: "orders-db".into(),
+                    kind: ComponentKind::Database,
+                    name: "Orders DB".into(),
+                    capacity: 80,
+                    latency_ms: 25,
+                    error_rate: 0.005,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+            ],
+            connections: vec![
+                ConnectionConfig {
+                    from: "client".into(),
+                    to: "checkout-api".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+                ConnectionConfig {
+                    from: "checkout-api".into(),
+                    to: "orders-db".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+            ],
+            traffic: TrafficConfig {
+                start_rps: 20,
+                target_rps: 500,
+                ramp_seconds: 30,
             },
             seed: 42,
         }
@@ -663,5 +813,183 @@ mod tests {
         assert!(engine.step());
         assert_eq!(engine.metrics().total_requests, 1);
         assert!(engine.state().requests.contains_key(&1));
+    }
+
+    // --- Day 5: End-to-end request lifecycle tests ---
+
+    #[test]
+    fn three_node_simulation_visits_all_nodes() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.start();
+        engine.run(100000);
+
+        // At least one request should have visited both service and database
+        let visited_both = engine.state().requests.values().any(|r| {
+            r.visited.contains(&"checkout-api".to_string())
+                && r.visited.contains(&"orders-db".to_string())
+        });
+        assert!(
+            visited_both,
+            "at least one request should visit both service and database"
+        );
+    }
+
+    #[test]
+    fn three_node_simulation_completes_all_requests() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.start();
+        engine.run(100000);
+
+        let m = engine.metrics();
+        assert!(m.total_requests > 0, "should have generated requests");
+
+        // Every request should be in a terminal state
+        let all_done = engine
+            .state()
+            .requests
+            .values()
+            .all(|r| r.phase == RequestPhase::Done);
+        assert!(all_done, "all requests should be Done");
+
+        // successful + failed + timed_out + dropped should equal total
+        let accounted = m.successful + m.failed + m.timed_out + m.dropped;
+        assert_eq!(
+            accounted, m.total_requests,
+            "all requests should be accounted for"
+        );
+    }
+
+    #[test]
+    fn three_node_simulation_records_latency() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.start();
+        engine.run(100000);
+
+        // Completed latencies should be non-empty
+        assert!(
+            !engine.state().completed_latencies.is_empty(),
+            "should have recorded latencies"
+        );
+
+        // Every successful request should have hop latencies
+        let successful_with_hops = engine
+            .state()
+            .requests
+            .values()
+            .filter(|r| r.outcome == Some(RequestOutcome::Success))
+            .filter(|r| !r.hop_latencies.is_empty())
+            .count();
+        assert!(
+            successful_with_hops > 0,
+            "successful requests should have hop latencies"
+        );
+
+        // Latency should be at least: transit(10) + svc(20) + transit(5) + db(30) = 65ms
+        // (with jitter, could be slightly less, but not dramatically)
+        let min_expected = 50;
+        let any_reasonable = engine
+            .state()
+            .completed_latencies
+            .iter()
+            .any(|&l| l >= min_expected);
+        assert!(
+            any_reasonable,
+            "at least one latency should be >= {min_expected}ms"
+        );
+    }
+
+    #[test]
+    fn three_node_simulation_no_timeouts_with_healthy_config() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.start();
+        engine.run(100000);
+
+        let m = engine.metrics();
+        // With zero error rates and generous timeouts, nothing should time out
+        assert_eq!(m.timed_out, 0, "no timeouts expected with healthy config");
+        assert_eq!(m.failed, 0, "no failures expected with zero error rate");
+        assert_eq!(m.dropped, 0, "no drops expected with sufficient capacity");
+        assert_eq!(
+            m.successful, m.total_requests,
+            "all requests should succeed"
+        );
+    }
+
+    #[test]
+    fn three_node_deterministic_replay() {
+        let scenario = three_node_scenario();
+
+        let mut engine_a = Engine::new(scenario.clone());
+        engine_a.start();
+        engine_a.run(100000);
+
+        let mut engine_b = Engine::new(scenario);
+        engine_b.start();
+        engine_b.run(100000);
+
+        assert_eq!(
+            engine_a.metrics().total_requests,
+            engine_b.metrics().total_requests
+        );
+        assert_eq!(engine_a.metrics().successful, engine_b.metrics().successful);
+        assert_eq!(engine_a.metrics().failed, engine_b.metrics().failed);
+        assert_eq!(
+            engine_a.state().completed_latencies,
+            engine_b.state().completed_latencies,
+            "latency vectors should match exactly"
+        );
+    }
+
+    #[test]
+    fn retry_storm_scenario_runs_to_completion() {
+        let mut engine = Engine::new(retry_storm_scenario());
+        engine.start();
+        engine.run(500000);
+
+        let m = engine.metrics();
+        assert!(
+            m.total_requests > 100,
+            "retry storm should generate substantial traffic, got {}",
+            m.total_requests
+        );
+
+        // With error rates > 0, we expect some failures or retries
+        let accounted = m.successful + m.failed + m.timed_out + m.dropped;
+        assert_eq!(
+            accounted, m.total_requests,
+            "all requests should be accounted for"
+        );
+
+        // All requests should be in terminal state
+        let all_done = engine
+            .state()
+            .requests
+            .values()
+            .all(|r| r.phase == RequestPhase::Done);
+        assert!(all_done, "all requests should be Done after retry storm");
+
+        // The scheduler should be empty
+        assert!(engine.scheduler.is_empty(), "scheduler should be drained");
+    }
+
+    #[test]
+    fn retry_storm_deterministic_replay() {
+        let scenario = retry_storm_scenario();
+
+        let mut engine_a = Engine::new(scenario.clone());
+        engine_a.start();
+        engine_a.run(500000);
+
+        let mut engine_b = Engine::new(scenario);
+        engine_b.start();
+        engine_b.run(500000);
+
+        assert_eq!(
+            engine_a.metrics().total_requests,
+            engine_b.metrics().total_requests
+        );
+        assert_eq!(engine_a.metrics().successful, engine_b.metrics().successful);
+        assert_eq!(engine_a.metrics().retries, engine_b.metrics().retries);
+        assert_eq!(engine_a.metrics().timed_out, engine_b.metrics().timed_out);
     }
 }
