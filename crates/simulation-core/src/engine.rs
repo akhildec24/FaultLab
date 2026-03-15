@@ -142,9 +142,7 @@ impl Engine {
                     self.complete_request_success(request_id, time);
                 } else {
                     for (dest_id, _) in &downstream {
-                        if let Some(transit) =
-                            self.router.transit_time(&origin, dest_id, &mut self.rng)
-                        {
+                        if let Some(transit) = self.network_transit(&origin, dest_id, time) {
                             let arrival_time = time.add(transit);
                             self.scheduler.schedule(
                                 arrival_time,
@@ -154,7 +152,7 @@ impl Engine {
                                 },
                             );
                         } else {
-                            // Packet lost — mark as failed
+                            // Packet lost or connection down — mark as failed
                             self.complete_request_failed(request_id);
                         }
                     }
@@ -235,9 +233,7 @@ impl Engine {
                         let downstream = self.router.downstream(&node_id).to_vec();
                         let mut forwarded = false;
                         for (dest_id, _) in &downstream {
-                            if let Some(transit) =
-                                self.router.transit_time(&node_id, dest_id, &mut self.rng)
-                            {
+                            if let Some(transit) = self.network_transit(&node_id, dest_id, time) {
                                 if let Some(req) = self.state.requests.get_mut(&request_id) {
                                     req.phase = RequestPhase::InTransit;
                                 }
@@ -306,7 +302,7 @@ impl Engine {
                     .map(|r| r.origin.clone())
                     .unwrap_or_default();
 
-                if let Some(transit) = self.router.transit_time(&origin, &node_id, &mut self.rng) {
+                if let Some(transit) = self.network_transit(&origin, &node_id, time) {
                     self.scheduler.schedule(
                         time.add(transit),
                         Event::RequestArrived {
@@ -315,7 +311,7 @@ impl Engine {
                         },
                     );
                 } else {
-                    // Packet lost during retry transit
+                    // Packet lost or connection down during retry transit
                     self.complete_request_failed(request_id);
                 }
             }
@@ -347,7 +343,24 @@ impl Engine {
                     node.state = NodeState::Healthy;
                 }
             }
+
+            Event::ConnectionFailed { from, to } => {
+                self.state.network.disconnect(&from, &to);
+            }
+
+            Event::ConnectionRestored { from, to } => {
+                self.state.network.reconnect(&from, &to);
+            }
         }
+    }
+
+    /// Calculate transit time through the network model.
+    /// Returns `None` if the connection is down or the packet is lost.
+    fn network_transit(&mut self, from: &str, to: &str, time: VirtualTime) -> Option<u64> {
+        let config = self.router.connection(from, to)?.clone();
+        self.state
+            .network
+            .transit_time(from, to, &config, &mut self.rng, time.millis())
     }
 
     fn start_processing(&mut self, request_id: u64, node_id: &str, time: VirtualTime) {
@@ -991,5 +1004,179 @@ mod tests {
         assert_eq!(engine_a.metrics().successful, engine_b.metrics().successful);
         assert_eq!(engine_a.metrics().retries, engine_b.metrics().retries);
         assert_eq!(engine_a.metrics().timed_out, engine_b.metrics().timed_out);
+    }
+
+    // --- Day 6: Network model tests ---
+
+    #[test]
+    fn connection_failed_disconnects() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.scheduler.schedule(
+            VirtualTime(0),
+            Event::ConnectionFailed {
+                from: "client".into(),
+                to: "checkout-api".into(),
+            },
+        );
+        engine.step();
+        assert!(!engine
+            .state()
+            .network
+            .is_connected("client", "checkout-api"));
+    }
+
+    #[test]
+    fn connection_restored_reconnects() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.scheduler.schedule(
+            VirtualTime(0),
+            Event::ConnectionFailed {
+                from: "client".into(),
+                to: "checkout-api".into(),
+            },
+        );
+        engine.step();
+        engine.scheduler.schedule(
+            VirtualTime(100),
+            Event::ConnectionRestored {
+                from: "client".into(),
+                to: "checkout-api".into(),
+            },
+        );
+        engine.step();
+        assert!(engine
+            .state()
+            .network
+            .is_connected("client", "checkout-api"));
+    }
+
+    #[test]
+    fn disconnected_connection_drops_requests() {
+        let mut engine = Engine::new(three_node_scenario());
+
+        // Disconnect before starting
+        engine.scheduler.schedule(
+            VirtualTime(0),
+            Event::ConnectionFailed {
+                from: "client".into(),
+                to: "checkout-api".into(),
+            },
+        );
+        engine.step();
+
+        // Now schedule a single request
+        engine.scheduler.schedule(
+            VirtualTime(1),
+            Event::RequestCreated {
+                request_id: 999,
+                origin: "client".into(),
+            },
+        );
+        engine.step();
+
+        // Request should be failed since connection is down
+        let req = &engine.state().requests[&999];
+        assert_eq!(req.phase, RequestPhase::Done);
+        assert_eq!(req.outcome, Some(RequestOutcome::Failed));
+    }
+
+    #[test]
+    fn bandwidth_limit_drops_excess_requests() {
+        let scenario = Scenario {
+            name: "bandwidth-test".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+                NodeConfig {
+                    id: "svc".into(),
+                    kind: ComponentKind::Service,
+                    name: "Service".into(),
+                    capacity: 1000,
+                    latency_ms: 20,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+            ],
+            connections: vec![ConnectionConfig {
+                from: "client".into(),
+                to: "svc".into(),
+                latency_ms: 10,
+                packet_loss: 0.0,
+                bandwidth_rps: 3, // Only 3 requests per second
+            }],
+            traffic: TrafficConfig {
+                start_rps: 10,
+                target_rps: 10,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        };
+
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(100000);
+
+        // With 10 rps but bandwidth limited to 3 rps, some requests should fail
+        let m = engine.metrics();
+        assert!(m.failed > 0, "bandwidth limit should cause some failures");
+    }
+
+    #[test]
+    fn network_state_initialised_from_scenario() {
+        let engine = Engine::new(three_node_scenario());
+        // Should have 2 connections
+        assert!(engine
+            .state()
+            .network
+            .is_connected("client", "checkout-api"));
+        assert!(engine
+            .state()
+            .network
+            .is_connected("checkout-api", "orders-db"));
+    }
+
+    #[test]
+    fn network_injected_latency_increases_transit() {
+        let mut engine = Engine::new(three_node_scenario());
+
+        // Inject 500ms latency on client → checkout-api
+        engine
+            .state
+            .network
+            .inject_latency("client", "checkout-api", 500);
+
+        // Schedule a request and check it takes longer
+        engine.scheduler.schedule(
+            VirtualTime(0),
+            Event::RequestCreated {
+                request_id: 1,
+                origin: "client".into(),
+            },
+        );
+        engine.step();
+
+        // The RequestArrived event should be at ~510ms (10 base + 500 injected)
+        // Check the next event time
+        let next = engine.scheduler.peek();
+        assert!(next.is_some());
+        let (t, _) = next.unwrap();
+        assert!(
+            t.millis() >= 450 && t.millis() <= 560,
+            "transit time should include injected latency, got {}ms",
+            t.millis()
+        );
     }
 }

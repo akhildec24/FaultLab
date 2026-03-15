@@ -73,6 +73,11 @@ impl Scheduler {
         Some((scheduled.time, scheduled.event))
     }
 
+    /// Peek at the next event without popping it.
+    pub fn peek(&self) -> Option<(VirtualTime, &Event)> {
+        self.queue.peek().map(|e| (e.time, &e.event))
+    }
+
     /// Current virtual time.
     pub fn now(&self) -> VirtualTime {
         self.current_time

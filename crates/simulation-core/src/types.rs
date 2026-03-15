@@ -346,6 +346,14 @@ pub enum Event {
         request_id: u64,
         queue_id: String,
     },
+    ConnectionFailed {
+        from: String,
+        to: String,
+    },
+    ConnectionRestored {
+        from: String,
+        to: String,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +408,7 @@ pub struct SimulationState {
     pub current_time: VirtualTime,
     pub requests: HashMap<u64, RequestState>,
     pub nodes: HashMap<String, NodeRuntimeState>,
+    pub network: crate::network::NetworkState,
     pub next_request_id: u64,
     pub metrics: Metrics,
     pub completed_latencies: Vec<u64>,
@@ -420,6 +429,7 @@ impl SimulationState {
             current_time: VirtualTime::zero(),
             requests: HashMap::new(),
             nodes,
+            network: crate::network::NetworkState::from_connections(&scenario.connections),
             next_request_id: 1,
             metrics: Metrics::default(),
             completed_latencies: Vec::new(),
