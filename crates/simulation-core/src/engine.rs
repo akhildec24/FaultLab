@@ -98,11 +98,11 @@ impl Engine {
         }
     }
 
-    /// Run until all events are processed or `max_steps` is reached.
-    /// Returns the number of steps executed.
+    /// Run until all events are processed, `max_steps` is reached,
+    /// or the engine is paused. Returns the number of steps executed.
     pub fn run(&mut self, max_steps: usize) -> usize {
         let mut steps = 0;
-        while steps < max_steps && self.step() {
+        while steps < max_steps && self.running && self.step() {
             steps += 1;
         }
         steps
@@ -366,7 +366,11 @@ impl Engine {
     fn start_processing(&mut self, request_id: u64, node_id: &str, time: VirtualTime) {
         let config = match self.scenario.nodes.iter().find(|n| n.id == node_id) {
             Some(c) => c,
-            None => return,
+            None => {
+                // Node doesn't exist — mark request as failed
+                self.complete_request_failed(request_id);
+                return;
+            }
         };
 
         if let Some(req) = self.state.requests.get_mut(&request_id) {
