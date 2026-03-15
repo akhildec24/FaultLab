@@ -24,6 +24,10 @@ pub struct Engine {
     rng: Rng,
     running: bool,
     traffic_scheduled: bool,
+    /// Recent events for external consumers (e.g. WASM UI).
+    recent_events: Vec<(VirtualTime, Event)>,
+    /// Max number of recent events to retain.
+    recent_events_cap: usize,
 }
 
 impl Engine {
@@ -39,6 +43,8 @@ impl Engine {
             rng,
             running: false,
             traffic_scheduled: false,
+            recent_events: Vec::new(),
+            recent_events_cap: 256,
         }
     }
 
@@ -65,6 +71,7 @@ impl Engine {
         self.rng = Rng::new(self.scenario.seed);
         self.running = false;
         self.traffic_scheduled = false;
+        self.recent_events.clear();
     }
 
     pub fn is_running(&self) -> bool {
@@ -85,6 +92,21 @@ impl Engine {
 
     pub fn scenario(&self) -> &Scenario {
         &self.scenario
+    }
+
+    /// Recent events for external consumers (e.g. WASM UI).
+    pub fn recent_events(&self) -> &[(VirtualTime, Event)] {
+        &self.recent_events
+    }
+
+    /// Drain recent events (consume and return them, clearing the buffer).
+    pub fn drain_recent_events(&mut self) -> Vec<(VirtualTime, Event)> {
+        std::mem::take(&mut self.recent_events)
+    }
+
+    /// Number of pending events in the scheduler queue.
+    pub fn pending(&self) -> usize {
+        self.scheduler.pending()
     }
 
     /// Process the next pending event. Returns `false` when no events remain.
@@ -129,6 +151,11 @@ impl Engine {
 
     fn handle_event(&mut self, time: VirtualTime, event: Event) {
         self.state.current_time = time;
+        // Log event for recent_events buffer
+        if self.recent_events.len() >= self.recent_events_cap {
+            self.recent_events.remove(0);
+        }
+        self.recent_events.push((time, event.clone()));
         match event {
             Event::RequestCreated { request_id, origin } => {
                 let req = RequestState::new(request_id, origin.clone(), time);

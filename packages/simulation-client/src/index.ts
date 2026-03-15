@@ -1,0 +1,136 @@
+/**
+ * FaultLab Simulation Engine — TypeScript wrapper.
+ *
+ * This module wraps the raw WASM bindings exported by simulation-wasm.
+ * It provides typed interfaces for metrics, state, and events.
+ *
+ * The actual WASM module is loaded dynamically in the browser.
+ */
+
+// --- Types ---
+
+export interface Metrics {
+  total_requests: number;
+  successful: number;
+  failed: number;
+  timed_out: number;
+  retries: number;
+  dropped: number;
+  current_rps: number;
+  avg_latency_ms: number;
+  p50_latency_ms: number;
+  p95_latency_ms: number;
+  p99_latency_ms: number;
+  queue_depths: Record<string, number>;
+  node_utilisation: Record<string, number>;
+}
+
+export interface RecentEvent {
+  time: number;
+  event: SimEvent;
+}
+
+export type SimEvent =
+  | { type: 'request_created'; request_id: number; origin: string }
+  | { type: 'request_arrived'; request_id: number; node_id: string }
+  | { type: 'request_started'; request_id: number; node_id: string }
+  | { type: 'request_completed'; request_id: number; node_id: string; success: boolean }
+  | { type: 'request_timed_out'; request_id: number; node_id: string }
+  | { type: 'retry_scheduled'; request_id: number; node_id: string; retry_count: number }
+  | { type: 'node_failed'; node_id: string }
+  | { type: 'node_recovered'; node_id: string }
+  | { type: 'message_queued'; request_id: number; queue_id: string }
+  | { type: 'message_dropped'; request_id: number; queue_id: string }
+  | { type: 'connection_failed'; from: string; to: string }
+  | { type: 'connection_restored'; from: string; to: string };
+
+// --- WASM module interface ---
+
+export interface WasmSimulation {
+  new (): WasmSimulation;
+  loadScenario(json: string): void;
+  start(): void;
+  pause(): void;
+  reset(): void;
+  step(): boolean;
+  run(maxSteps: number): number;
+  isRunning(): boolean;
+  currentTime(): number;
+  getMetrics(): string;
+  getState(): string;
+  getRecentEvents(): string;
+  pendingEvents(): number;
+}
+
+/**
+ * Load the WASM module dynamically.
+ * Returns a constructor for `Simulation`.
+ */
+export async function loadEngine(): Promise<{
+  Simulation: new () => WasmSimulation;
+}> {
+  // In production, this would load from the wasm-pack output.
+  // The exact path depends on the bundler setup.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wasm: any = await import(/* @vite-ignore */ '../../wasm/simulation_wasm.js');
+  return wasm;
+}
+
+/**
+ * High-level wrapper around the raw WASM Simulation.
+ */
+export class Simulation {
+  private inner: WasmSimulation;
+
+  constructor(inner: WasmSimulation) {
+    this.inner = inner;
+  }
+
+  loadScenario(json: string): void {
+    this.inner.loadScenario(json);
+  }
+
+  start(): void {
+    this.inner.start();
+  }
+
+  pause(): void {
+    this.inner.pause();
+  }
+
+  reset(): void {
+    this.inner.reset();
+  }
+
+  step(): boolean {
+    return this.inner.step();
+  }
+
+  run(maxSteps: number): number {
+    return this.inner.run(maxSteps);
+  }
+
+  isRunning(): boolean {
+    return this.inner.isRunning();
+  }
+
+  currentTime(): number {
+    return this.inner.currentTime();
+  }
+
+  getMetrics(): Metrics {
+    return JSON.parse(this.inner.getMetrics());
+  }
+
+  getState(): unknown {
+    return JSON.parse(this.inner.getState());
+  }
+
+  getRecentEvents(): RecentEvent[] {
+    return JSON.parse(this.inner.getRecentEvents());
+  }
+
+  pendingEvents(): number {
+    return this.inner.pendingEvents();
+  }
+}
