@@ -7,6 +7,10 @@
  * The actual WASM module is loaded dynamically in the browser.
  */
 
+// Re-export worker client and protocol types
+export { SimulationWorkerClient } from './client'
+export type { SimulationEvent, WorkerRequest, WorkerResponse, WorkerMessage, WorkerPayload } from './protocol'
+
 // --- Types ---
 
 export interface Metrics {
