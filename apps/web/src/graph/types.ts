@@ -13,12 +13,22 @@ export interface GraphNode {
   label: string
   x: number
   y: number
+  // Config properties (mirror Rust NodeConfig)
+  capacity: number
+  latency_ms: number
+  error_rate: number
+  timeout_ms: number
+  queue_limit: number | null
 }
 
 export interface GraphEdge {
   id: string
   from: string
   to: string
+  // Config properties (mirror Rust ConnectionConfig)
+  latency_ms: number
+  packet_loss: number
+  bandwidth_rps: number
 }
 
 export interface GraphState {
@@ -50,6 +60,44 @@ export const NODE_ICONS: Record<NodeKind, string> = {
   client: 'C',
   service: 'S',
   database: 'D',
+}
+
+/** Default config values per node kind. */
+export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 'y'>> = {
+  client: {
+    kind: 'client',
+    label: 'Client',
+    capacity: 100,
+    latency_ms: 5,
+    error_rate: 0,
+    timeout_ms: 5000,
+    queue_limit: null,
+  },
+  service: {
+    kind: 'service',
+    label: 'Service',
+    capacity: 50,
+    latency_ms: 20,
+    error_rate: 0,
+    timeout_ms: 1000,
+    queue_limit: 100,
+  },
+  database: {
+    kind: 'database',
+    label: 'Database',
+    capacity: 20,
+    latency_ms: 50,
+    error_rate: 0,
+    timeout_ms: 2000,
+    queue_limit: 50,
+  },
+}
+
+/** Default config values for edges. */
+export const DEFAULT_EDGE_CONFIG: Omit<GraphEdge, 'id' | 'from' | 'to'> = {
+  latency_ms: 10,
+  packet_loss: 0,
+  bandwidth_rps: 0,
 }
 
 /** Generate a unique node ID. */

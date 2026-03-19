@@ -8,7 +8,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { GraphNode, GraphEdge, GraphState, NodeKind } from '@/graph/types'
-import { generateNodeId, generateEdgeId } from '@/graph/types'
+import { generateNodeId, generateEdgeId, DEFAULT_NODE_CONFIG, DEFAULT_EDGE_CONFIG } from '@/graph/types'
 
 export const useGraphStore = defineStore('graph', () => {
   // --- State ---
@@ -33,9 +33,10 @@ export const useGraphStore = defineStore('graph', () => {
 
   function addNode(kind: NodeKind, x: number, y: number, label?: string): GraphNode {
     const id = generateNodeId()
+    const defaults = DEFAULT_NODE_CONFIG[kind]
     const node: GraphNode = {
+      ...defaults,
       id,
-      kind,
       label: label ?? `${kind}-${nodes.value.length + 1}`,
       x,
       y,
@@ -72,6 +73,7 @@ export const useGraphStore = defineStore('graph', () => {
     )
     if (exists) return null
     const edge: GraphEdge = {
+      ...DEFAULT_EDGE_CONFIG,
       id: generateEdgeId(),
       from,
       to,
@@ -80,6 +82,20 @@ export const useGraphStore = defineStore('graph', () => {
     selectedEdgeId.value = edge.id
     selectedNodeId.value = null
     return edge
+  }
+
+  function updateNode(id: string, patch: Partial<GraphNode>): void {
+    const node = nodes.value.find((n) => n.id === id)
+    if (node) {
+      Object.assign(node, patch)
+    }
+  }
+
+  function updateEdge(id: string, patch: Partial<GraphEdge>): void {
+    const edge = edges.value.find((e) => e.id === id)
+    if (edge) {
+      Object.assign(edge, patch)
+    }
   }
 
   function removeEdge(id: string): void {
@@ -136,9 +152,11 @@ export const useGraphStore = defineStore('graph', () => {
     moveNode,
     removeNode,
     selectNode,
+    updateNode,
     addEdge,
     removeEdge,
     selectEdge,
+    updateEdge,
     clearSelection,
     clear,
     loadState,

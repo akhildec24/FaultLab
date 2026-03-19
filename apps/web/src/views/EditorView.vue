@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import GraphEditor from '@/components/GraphEditor.vue'
+import NodeInspector from '@/components/NodeInspector.vue'
+import EdgeInspector from '@/components/EdgeInspector.vue'
+import { useGraphStore } from '@/stores/graph'
+
+const graph = useGraphStore()
 </script>
 
 <template>
@@ -13,8 +18,17 @@ import GraphEditor from '@/components/GraphEditor.vue'
         </p>
       </div>
     </div>
-    <div class="editor-view__canvas">
-      <GraphEditor />
+    <div class="editor-view__body">
+      <div class="editor-view__canvas">
+        <GraphEditor />
+      </div>
+      <aside class="editor-view__inspector">
+        <NodeInspector v-if="graph.selectedNodeId" />
+        <EdgeInspector v-else-if="graph.selectedEdgeId" />
+        <div class="inspector inspector--empty" v-else>
+          <p class="inspector__empty-text">Select a node or connection to edit its properties</p>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -42,10 +56,39 @@ import GraphEditor from '@/components/GraphEditor.vue'
   margin-top: var(--fl-space-1);
 }
 
+.editor-view__body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
 .editor-view__canvas {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.editor-view__inspector {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inspector--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fl-bg);
+  border-left: 2px solid var(--fl-border);
+}
+
+.inspector__empty-text {
+  color: var(--fl-grey-3);
+  font-size: var(--fl-size-16);
+  text-align: center;
+  padding: var(--fl-space-3);
 }
 </style>
