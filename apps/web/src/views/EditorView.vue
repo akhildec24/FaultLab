@@ -2,6 +2,7 @@
 import GraphEditor from '@/components/GraphEditor.vue'
 import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
+import SimulationControls from '@/components/SimulationControls.vue'
 import { useGraphStore } from '@/stores/graph'
 
 const graph = useGraphStore()
@@ -18,6 +19,7 @@ const graph = useGraphStore()
         </p>
       </div>
     </div>
+    <SimulationControls />
     <div class="editor-view__body">
       <div class="editor-view__canvas">
         <GraphEditor />
