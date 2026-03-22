@@ -25,6 +25,13 @@ export const useSimulationStore = defineStore('simulation', () => {
   // --- Worker client (lazy init) ---
   let client: SimulationWorkerClient | null = null
 
+  /** Callback fired when new events arrive from the worker. */
+  let eventsCallback: ((events: unknown[]) => void) | null = null
+
+  function onEvents(cb: ((events: unknown[]) => void) | null): void {
+    eventsCallback = cb
+  }
+
   function ensureClient(): SimulationWorkerClient {
     if (!client) {
       const workerUrl = new URL(
@@ -41,6 +48,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     switch (event.type) {
       case 'EVENTS':
         recentEvents.value = event.events
+        if (eventsCallback) eventsCallback(event.events)
         break
       case 'ENGINE_STOPPED':
         running.value = false
@@ -192,5 +200,6 @@ export const useSimulationStore = defineStore('simulation', () => {
     refreshMetrics,
     refreshStatus,
     terminate,
+    onEvents,
   }
 })

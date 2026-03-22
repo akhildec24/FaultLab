@@ -10,10 +10,13 @@
 import { computed, ref } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
+import { useAnimationStore } from '@/stores/animation'
 import { validateGraph, graphToScenarioJson } from '@/graph/converter'
+import type { SpeedMultiplier } from '@/graph/animation'
 
 const graph = useGraphStore()
 const sim = useSimulationStore()
+const animation = useAnimationStore()
 
 const showErrors = ref(false)
 
@@ -53,6 +56,12 @@ async function continueRun() {
 }
 
 const metrics = computed(() => sim.metrics)
+
+const speedOptions: SpeedMultiplier[] = [0.5, 1, 2, 4]
+
+function setSpeed(s: SpeedMultiplier) {
+  animation.setSpeed(s)
+}
 </script>
 
 <template>
@@ -112,6 +121,16 @@ const metrics = computed(() => sim.metrics)
       >
         ↺ Reset
       </button>
+
+      <div class="sim-controls__speed">
+        <span class="sim-controls__speed-label">Speed</span>
+        <button
+          v-for="s in speedOptions"
+          :key="s"
+          :class="['sim-controls__speed-btn', { 'is-active': animation.speed === s }]"
+          @click="setSpeed(s)"
+        >{{ s }}x</button>
+      </div>
     </div>
 
     <!-- Status bar -->
@@ -197,6 +216,40 @@ const metrics = computed(() => sim.metrics)
 .sim-controls__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.sim-controls__speed {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-1);
+  margin-left: auto;
+}
+
+.sim-controls__speed-label {
+  font-size: var(--fl-size-14);
+  color: var(--fl-grey-3);
+}
+
+.sim-controls__speed-btn {
+  padding: var(--fl-space-1) var(--fl-space-2);
+  font-size: var(--fl-size-14);
+  font-weight: 600;
+  color: var(--fl-grey-2);
+  background: transparent;
+  border: 1px solid var(--fl-slate-light);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-controls__speed-btn:hover {
+  color: var(--fl-white);
+  background: var(--fl-slate-light);
+}
+
+.sim-controls__speed-btn.is-active {
+  color: var(--fl-slate);
+  background: var(--fl-amber);
+  border-color: var(--fl-amber);
 }
 
 .sim-controls__errors {

@@ -1,11 +1,27 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import GraphEditor from '@/components/GraphEditor.vue'
 import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
 import SimulationControls from '@/components/SimulationControls.vue'
 import { useGraphStore } from '@/stores/graph'
+import { useSimulationStore } from '@/stores/simulation'
+import { useAnimationStore } from '@/stores/animation'
 
 const graph = useGraphStore()
+const sim = useSimulationStore()
+const animation = useAnimationStore()
+
+// Wire simulation events → animation store
+onMounted(() => {
+  sim.onEvents((events) => animation.processEvents(events))
+})
+
+onUnmounted(() => {
+  sim.onEvents(null)
+  animation.stopLoop()
+  animation.clear()
+})
 </script>
 
 <template>

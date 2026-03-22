@@ -13,6 +13,7 @@
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGraphStore } from '@/stores/graph'
+import { useAnimationStore } from '@/stores/animation'
 import {
   NODE_WIDTH,
   NODE_HEIGHT,
@@ -21,8 +22,10 @@ import {
   type NodeKind,
   type ViewTransform,
 } from '@/graph/types'
+import { PARTICLE_COLORS } from '@/graph/animation'
 
 const graph = useGraphStore()
+const animation = useAnimationStore()
 
 // --- View transform (pan/zoom) ---
 const view = ref<ViewTransform>({ panX: 0, panY: 0, zoom: 1 })
@@ -232,6 +235,35 @@ const tempEdgePath = computed(() => {
 const transformStr = computed(() =>
   `translate(${view.value.panX}, ${view.value.panY}) scale(${view.value.zoom})`,
 )
+
+// --- Animation helpers ---
+function getNodeCenterX(nodeId: string): number {
+  const node = graph.nodes.find((n) => n.id === nodeId)
+  return node ? node.x + NODE_WIDTH / 2 : 0
+}
+
+function getNodeCenterY(nodeId: string): number {
+  const node = graph.nodes.find((n) => n.id === nodeId)
+  return node ? node.y + NODE_HEIGHT / 2 : 0
+}
+
+function getParticleX(p: { fromId: string; toId: string; progress: number }): number {
+  const from = graph.nodes.find((n) => n.id === p.fromId)
+  const to = graph.nodes.find((n) => n.id === p.toId)
+  if (!from || !to) return 0
+  const x1 = from.x + NODE_WIDTH
+  const x2 = to.x
+  return x1 + (x2 - x1) * p.progress
+}
+
+function getParticleY(p: { fromId: string; toId: string; progress: number }): number {
+  const from = graph.nodes.find((n) => n.id === p.fromId)
+  const to = graph.nodes.find((n) => n.id === p.toId)
+  if (!from || !to) return 0
+  const y1 = from.y + NODE_HEIGHT / 2
+  const y2 = to.y + NODE_HEIGHT / 2
+  return y1 + (y2 - y1) * p.progress
+}
 </script>
 
 <template>
@@ -359,6 +391,33 @@ const transformStr = computed(() =>
             stroke="white"
             stroke-width="2"
             @mousedown.stop="startConnect($event, node.id)"
+          />
+        </g>
+
+        <!-- Animation: node flashes -->
+        <g class="flashes">
+          <circle
+            v-for="flash in animation.flashes"
+            :key="flash.nodeId + '-' + flash.remaining"
+            :cx="getNodeCenterX(flash.nodeId)"
+            :cy="getNodeCenterY(flash.nodeId)"
+            :r="NODE_WIDTH / 2 + 8"
+            :fill="flash.color"
+            :opacity="Math.min(flash.remaining / 800, 0.4)"
+            pointer-events="none"
+          />
+        </g>
+
+        <!-- Animation: request particles -->
+        <g class="particles">
+          <circle
+            v-for="(p, i) in animation.particles"
+            :key="p.requestId + '-' + i"
+            :cx="getParticleX(p)"
+            :cy="getParticleY(p)"
+            r="6"
+            :fill="PARTICLE_COLORS[p.status]"
+            pointer-events="none"
           />
         </g>
       </g>
