@@ -192,6 +192,7 @@ function setSpeed(s: SpeedMultiplier) {
   gap: var(--fl-space-2);
   padding: var(--fl-space-2) var(--fl-space-3);
   background: var(--fl-slate);
+  flex-shrink: 0;
 }
 
 .sim-controls__buttons {

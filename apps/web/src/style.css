@@ -143,6 +143,7 @@ textarea:focus-visible,
 
 .fl-width-full {
   max-width: var(--fl-width-full);
+  width: 100%;
 }
 
 /* Buttons */

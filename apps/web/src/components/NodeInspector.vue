@@ -207,7 +207,6 @@ const kindOptions: { value: NodeKind; label: string }[] = [
   flex-direction: column;
   height: 100%;
   background: var(--fl-bg);
-  border-left: 2px solid var(--fl-border);
 }
 
 .inspector--empty {
@@ -217,7 +216,7 @@ const kindOptions: { value: NodeKind; label: string }[] = [
 
 .inspector__empty-text {
   color: var(--fl-grey-3);
-  font-size: var(--fl-size-16);
+  font-size: var(--fl-size-14);
 }
 
 .inspector__header {

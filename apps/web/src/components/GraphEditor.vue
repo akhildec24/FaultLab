@@ -440,8 +440,9 @@ function getParticleY(p: { fromId: string; toId: string; progress: number }): nu
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 500px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .graph-toolbar {
@@ -450,7 +451,7 @@ function getParticleY(p: { fromId: string; toId: string; progress: number }): nu
   gap: var(--fl-space-4);
   padding: var(--fl-space-2) var(--fl-space-3);
   background: var(--fl-slate);
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .graph-toolbar__group {
@@ -489,6 +490,7 @@ function getParticleY(p: { fromId: string; toId: string; progress: number }): nu
 .graph-canvas {
   flex: 1;
   width: 100%;
+  min-height: 0;
   background: var(--fl-bg-alt);
   cursor: default;
   user-select: none;
