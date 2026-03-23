@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { GraphNode, GraphEdge, GraphState, NodeKind } from '@/graph/types'
 import { generateNodeId, generateEdgeId, DEFAULT_NODE_CONFIG, DEFAULT_EDGE_CONFIG } from '@/graph/types'
+import { instantiatePreset, type PresetScenario } from '@/graph/presets'
 
 export const useGraphStore = defineStore('graph', () => {
   // --- State ---
@@ -120,6 +121,14 @@ export const useGraphStore = defineStore('graph', () => {
     selectedEdgeId.value = null
   }
 
+  function loadPreset(preset: PresetScenario): void {
+    const { nodes: presetNodes, edges: presetEdges } = instantiatePreset(preset)
+    nodes.value = presetNodes
+    edges.value = presetEdges
+    selectedNodeId.value = null
+    selectedEdgeId.value = null
+  }
+
   function loadState(state: GraphState): void {
     nodes.value = [...state.nodes]
     edges.value = [...state.edges]
@@ -159,6 +168,7 @@ export const useGraphStore = defineStore('graph', () => {
     updateEdge,
     clearSelection,
     clear,
+    loadPreset,
     loadState,
     getState,
   }

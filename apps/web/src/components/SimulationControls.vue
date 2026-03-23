@@ -13,6 +13,7 @@ import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
 import { validateGraph, graphToScenarioJson } from '@/graph/converter'
 import type { SpeedMultiplier } from '@/graph/animation'
+import PresetSelector from '@/components/PresetSelector.vue'
 
 const graph = useGraphStore()
 const sim = useSimulationStore()
@@ -62,10 +63,20 @@ const speedOptions: SpeedMultiplier[] = [0.5, 1, 2, 4]
 function setSpeed(s: SpeedMultiplier) {
   animation.setSpeed(s)
 }
+
+const simClock = computed(() => {
+  const ms = sim.currentTime
+  if (ms < 1000) return `${ms}ms`
+  const s = (ms / 1000).toFixed(1)
+  return `${s}s`
+})
 </script>
 
 <template>
   <div class="sim-controls">
+    <!-- Preset selector -->
+    <PresetSelector />
+
     <!-- Validation errors -->
     <div class="sim-controls__errors" v-if="showErrors && !validation.valid">
       <div class="sim-controls__error" v-for="err in validation.errors" :key="err">
@@ -142,8 +153,8 @@ function setSpeed(s: SpeedMultiplier) {
         </span>
       </div>
       <div class="sim-controls__status-item">
-        <span class="sim-controls__status-label">Time</span>
-        <span class="sim-controls__status-value">{{ sim.currentTime }}ms</span>
+        <span class="sim-controls__status-label">Clock</span>
+        <span class="sim-controls__status-value sim-controls__clock">{{ simClock }}</span>
       </div>
       <div class="sim-controls__status-item">
         <span class="sim-controls__status-label">Pending</span>
@@ -302,6 +313,11 @@ function setSpeed(s: SpeedMultiplier) {
 }
 
 .is-paused {
+  color: var(--fl-amber);
+}
+
+.sim-controls__clock {
+  font-variant-numeric: tabular-nums;
   color: var(--fl-amber);
 }
 
