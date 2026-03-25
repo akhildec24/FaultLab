@@ -7,7 +7,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { GraphNode, GraphEdge, GraphState, NodeKind } from '@/graph/types'
+import type { GraphNode, GraphEdge, GraphState, NodeKind, ViewTransform } from '@/graph/types'
 import { generateNodeId, generateEdgeId, DEFAULT_NODE_CONFIG, DEFAULT_EDGE_CONFIG } from '@/graph/types'
 import { instantiatePreset, type PresetScenario } from '@/graph/presets'
 
@@ -17,6 +17,11 @@ export const useGraphStore = defineStore('graph', () => {
   const edges = ref<GraphEdge[]>([])
   const selectedNodeId = ref<string | null>(null)
   const selectedEdgeId = ref<string | null>(null)
+  const view = ref<ViewTransform>({ panX: 0, panY: 0, zoom: 1 })
+
+  const ZOOM_MIN = 0.3
+  const ZOOM_MAX = 3
+  const ZOOM_STEP = 0.1
 
   // --- Computed ---
   const selectedNode = computed(() =>
@@ -114,6 +119,16 @@ export const useGraphStore = defineStore('graph', () => {
     selectedEdgeId.value = null
   }
 
+  function zoomIn(): void {
+    view.value.zoom = Math.min(ZOOM_MAX, view.value.zoom + ZOOM_STEP)
+  }
+  function zoomOut(): void {
+    view.value.zoom = Math.max(ZOOM_MIN, view.value.zoom - ZOOM_STEP)
+  }
+  function resetView(): void {
+    view.value = { panX: 0, panY: 0, zoom: 1 }
+  }
+
   function clear(): void {
     nodes.value = []
     edges.value = []
@@ -151,6 +166,7 @@ export const useGraphStore = defineStore('graph', () => {
     edges,
     selectedNodeId,
     selectedEdgeId,
+    view,
     // Computed
     selectedNode,
     selectedEdge,
@@ -171,5 +187,8 @@ export const useGraphStore = defineStore('graph', () => {
     loadPreset,
     loadState,
     getState,
+    zoomIn,
+    zoomOut,
+    resetView,
   }
 })

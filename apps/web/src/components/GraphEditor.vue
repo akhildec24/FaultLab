@@ -20,28 +20,14 @@ import {
   NODE_COLORS,
   NODE_ICONS,
   type NodeKind,
-  type ViewTransform,
 } from '@/graph/types'
 import { PARTICLE_COLORS } from '@/graph/animation'
 
 const graph = useGraphStore()
 const animation = useAnimationStore()
 
-// --- View transform (pan/zoom) ---
-const view = ref<ViewTransform>({ panX: 0, panY: 0, zoom: 1 })
-const ZOOM_MIN = 0.3
-const ZOOM_MAX = 3
-const ZOOM_STEP = 0.1
-
-function zoomIn() {
-  view.value.zoom = Math.min(ZOOM_MAX, view.value.zoom + ZOOM_STEP)
-}
-function zoomOut() {
-  view.value.zoom = Math.max(ZOOM_MIN, view.value.zoom - ZOOM_STEP)
-}
-function resetView() {
-  view.value = { panX: 0, panY: 0, zoom: 1 }
-}
+// --- View transform (pan/zoom) — stored in graph store ---
+// Access via graph.view, graph.zoomIn, graph.zoomOut, graph.resetView
 
 // --- SVG ref ---
 const svgRef = ref<SVGSVGElement | null>(null)
@@ -52,8 +38,8 @@ function screenToGraph(clientX: number, clientY: number): { x: number; y: number
   if (!svg) return { x: 0, y: 0 }
   const rect = svg.getBoundingClientRect()
   return {
-    x: (clientX - rect.left - view.value.panX) / view.value.zoom,
-    y: (clientY - rect.top - view.value.panY) / view.value.zoom,
+    x: (clientX - rect.left - graph.view.panX) / graph.view.zoom,
+    y: (clientY - rect.top - graph.view.panY) / graph.view.zoom,
   }
 }
 
@@ -67,8 +53,8 @@ function startPan(e: MouseEvent) {
     panStart = {
       x: e.clientX,
       y: e.clientY,
-      panX: view.value.panX,
-      panY: view.value.panY,
+      panX: graph.view.panX,
+      panY: graph.view.panY,
     }
     graph.clearSelection()
   }
@@ -76,8 +62,8 @@ function startPan(e: MouseEvent) {
 
 function onPan(e: MouseEvent) {
   if (!isPanning.value) return
-  view.value.panX = panStart.panX + (e.clientX - panStart.x)
-  view.value.panY = panStart.panY + (e.clientY - panStart.y)
+  graph.view.panX = panStart.panX + (e.clientX - panStart.x)
+  graph.view.panY = panStart.panY + (e.clientY - panStart.y)
 }
 
 function stopPan() {
@@ -178,19 +164,19 @@ onUnmounted(() => {
 // --- Zoom on wheel ---
 function onWheel(e: WheelEvent) {
   e.preventDefault()
-  const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
-  const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, view.value.zoom + delta))
+  const delta = e.deltaY > 0 ? -0.1 : 0.1
+  const newZoom = Math.max(0.3, Math.min(3, graph.view.zoom + delta))
   // Zoom toward cursor
   const svg = svgRef.value
   if (svg) {
     const rect = svg.getBoundingClientRect()
     const mx = e.clientX - rect.left
     const my = e.clientY - rect.top
-    const ratio = newZoom / view.value.zoom
-    view.value.panX = mx - (mx - view.value.panX) * ratio
-    view.value.panY = my - (my - view.value.panY) * ratio
+    const ratio = newZoom / graph.view.zoom
+    graph.view.panX = mx - (mx - graph.view.panX) * ratio
+    graph.view.panY = my - (my - graph.view.panY) * ratio
   }
-  view.value.zoom = newZoom
+  graph.view.zoom = newZoom
 }
 
 // --- Add nodes ---
@@ -198,8 +184,8 @@ function addNode(kind: NodeKind) {
   const svg = svgRef.value
   if (!svg) return
   const rect = svg.getBoundingClientRect()
-  const cx = (rect.width / 2 - view.value.panX) / view.value.zoom
-  const cy = (rect.height / 2 - view.value.panY) / view.value.zoom
+  const cx = (rect.width / 2 - graph.view.panX) / graph.view.zoom
+  const cy = (rect.height / 2 - graph.view.panY) / graph.view.zoom
   // Offset slightly so nodes don't stack
   const offset = graph.nodeCount * 20
   graph.addNode(kind, cx + offset - NODE_WIDTH / 2, cy + offset - NODE_HEIGHT / 2)
@@ -233,7 +219,7 @@ const tempEdgePath = computed(() => {
 
 // --- Transform string ---
 const transformStr = computed(() =>
-  `translate(${view.value.panX}, ${view.value.panY}) scale(${view.value.zoom})`,
+  `translate(${graph.view.panX}, ${graph.view.panY}) scale(${graph.view.zoom})`,
 )
 
 // --- Animation helpers ---
@@ -264,36 +250,12 @@ function getParticleY(p: { fromId: string; toId: string; progress: number }): nu
   const y2 = to.y + NODE_HEIGHT / 2
   return y1 + (y2 - y1) * p.progress
 }
+
+defineExpose({ addNode })
 </script>
 
 <template>
   <div class="graph-editor">
-    <!-- Toolbar -->
-    <div class="graph-toolbar">
-      <div class="graph-toolbar__group">
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('client')">
-          + Client
-        </button>
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('service')">
-          + Service
-        </button>
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('database')">
-          + Database
-        </button>
-      </div>
-      <div class="graph-toolbar__group">
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="zoomOut">−</button>
-        <span class="graph-toolbar__zoom">{{ Math.round(view.zoom * 100) }}%</span>
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="zoomIn">+</button>
-        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="resetView">Reset</button>
-      </div>
-      <div class="graph-toolbar__group">
-        <span class="graph-toolbar__info">
-          {{ graph.nodeCount }} nodes · {{ graph.edgeCount }} edges
-        </span>
-      </div>
-    </div>
-
     <!-- SVG Canvas -->
     <svg
       ref="svgRef"
@@ -443,48 +405,6 @@ function getParticleY(p: { fromId: string; toId: string; progress: number }): nu
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.graph-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--fl-space-4);
-  padding: var(--fl-space-2) var(--fl-space-3);
-  background: var(--fl-slate);
-  flex-shrink: 0;
-}
-
-.graph-toolbar__group {
-  display: flex;
-  align-items: center;
-  gap: var(--fl-space-1);
-}
-
-.graph-toolbar__btn {
-  font-size: var(--fl-size-14);
-  padding: var(--fl-space-1) var(--fl-space-2);
-  color: var(--fl-white);
-  border-color: var(--fl-slate-light);
-  background: transparent;
-}
-
-.graph-toolbar__btn:hover {
-  background: var(--fl-slate-light);
-  color: var(--fl-white);
-}
-
-.graph-toolbar__zoom {
-  color: var(--fl-grey-2);
-  font-size: var(--fl-size-14);
-  font-variant-numeric: tabular-nums;
-  min-width: 48px;
-  text-align: center;
-}
-
-.graph-toolbar__info {
-  color: var(--fl-grey-2);
-  font-size: var(--fl-size-14);
-  margin-left: auto;
 }
 
 .graph-canvas {

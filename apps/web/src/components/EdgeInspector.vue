@@ -57,7 +57,10 @@ function deleteEdge(): void {
 <template>
   <div class="inspector" v-if="edge">
     <div class="inspector__header">
-      <h3 class="inspector__title">Connection</h3>
+      <div class="inspector__header-left">
+        <span class="inspector__header-icon inspector__header-icon--edge">→</span>
+        <h3 class="inspector__title">Connection</h3>
+      </div>
       <button class="fl-button fl-button--warning inspector__delete" @click="deleteEdge">
         Delete
       </button>
@@ -125,10 +128,6 @@ function deleteEdge(): void {
       <span class="inspector__footer-error">Fix errors before running simulation</span>
     </div>
   </div>
-
-  <div class="inspector inspector--empty" v-else>
-    <p class="inspector__empty-text">Select a connection to edit its properties</p>
-  </div>
 </template>
 
 <style scoped>
@@ -137,16 +136,6 @@ function deleteEdge(): void {
   flex-direction: column;
   height: 100%;
   background: var(--fl-bg);
-}
-
-.inspector--empty {
-  align-items: center;
-  justify-content: center;
-}
-
-.inspector__empty-text {
-  color: var(--fl-grey-3);
-  font-size: var(--fl-size-14);
 }
 
 .inspector__header {
@@ -158,10 +147,37 @@ function deleteEdge(): void {
   background: var(--fl-slate);
 }
 
+.inspector__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-2);
+  min-width: 0;
+}
+
+.inspector__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.inspector__header-icon--edge {
+  background: var(--fl-amber);
+}
+
 .inspector__title {
   color: var(--fl-white);
   font-size: var(--fl-size-19);
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inspector__delete {

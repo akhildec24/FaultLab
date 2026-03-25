@@ -9,6 +9,7 @@
 import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import type { NodeKind, RetryStrategyType } from '@/graph/types'
+import { NODE_COLORS, NODE_ICONS } from '@/graph/types'
 
 const graph = useGraphStore()
 
@@ -103,7 +104,13 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
 <template>
   <div class="inspector" v-if="node">
     <div class="inspector__header">
-      <h3 class="inspector__title">Node Properties</h3>
+      <div class="inspector__header-left">
+        <span
+          class="inspector__header-icon"
+          :style="{ background: NODE_COLORS[node.kind].stroke }"
+        >{{ NODE_ICONS[node.kind] }}</span>
+        <h3 class="inspector__title">{{ node.label }}</h3>
+      </div>
       <button class="fl-button fl-button--warning inspector__delete" @click="deleteNode">
         Delete
       </button>
@@ -294,10 +301,6 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
       <span class="inspector__footer-error">Fix errors before running simulation</span>
     </div>
   </div>
-
-  <div class="inspector inspector--empty" v-else>
-    <p class="inspector__empty-text">Select a node to edit its properties</p>
-  </div>
 </template>
 
 <style scoped>
@@ -306,16 +309,6 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
   flex-direction: column;
   height: 100%;
   background: var(--fl-bg);
-}
-
-.inspector--empty {
-  align-items: center;
-  justify-content: center;
-}
-
-.inspector__empty-text {
-  color: var(--fl-grey-3);
-  font-size: var(--fl-size-14);
 }
 
 .inspector__header {
@@ -327,10 +320,33 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
   background: var(--fl-slate);
 }
 
+.inspector__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-2);
+  min-width: 0;
+}
+
+.inspector__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 .inspector__title {
   color: var(--fl-white);
   font-size: var(--fl-size-19);
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inspector__delete {
