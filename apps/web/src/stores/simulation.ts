@@ -138,6 +138,17 @@ export const useSimulationStore = defineStore('simulation', () => {
     }
   }
 
+  async function injectFailure(json: string): Promise<void> {
+    clearError()
+    try {
+      const c = ensureClient()
+      await c.injectFailure(json)
+      await refreshStatus()
+    } catch (e) {
+      error.value = String(e)
+    }
+  }
+
   async function refreshMetrics(): Promise<void> {
     if (!client) return
     try {
@@ -197,6 +208,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     reset,
     step,
     run,
+    injectFailure,
     refreshMetrics,
     refreshStatus,
     terminate,

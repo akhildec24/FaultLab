@@ -14,6 +14,7 @@ import { useAnimationStore } from '@/stores/animation'
 import { validateGraph, graphToScenarioJson } from '@/graph/converter'
 import type { SpeedMultiplier } from '@/graph/animation'
 import PresetSelector from '@/components/PresetSelector.vue'
+import FailurePanel from '@/components/FailurePanel.vue'
 
 const graph = useGraphStore()
 const sim = useSimulationStore()
@@ -193,6 +194,9 @@ const simClock = computed(() => {
         <span class="sim-controls__metric-value">{{ Math.round(metrics.p95_latency_ms) }}ms</span>
       </div>
     </div>
+
+    <!-- Failure injection -->
+    <FailurePanel v-if="sim.loaded" />
   </div>
 </template>
 

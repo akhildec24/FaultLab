@@ -59,4 +59,7 @@ export class Simulation {
   pendingEvents() {
     return 0
   }
+  injectFailure(json) {
+    console.warn('[stub] Simulation.injectFailure:', json)
+  }
 }

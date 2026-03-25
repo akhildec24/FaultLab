@@ -135,6 +135,10 @@ export class SimulationWorkerClient {
     })
   }
 
+  injectFailure(json: string): Promise<void> {
+    return this.send({ type: 'INJECT_FAILURE', json, id: 0 }).then(() => undefined)
+  }
+
   terminate(): void {
     this.worker.terminate()
     for (const [, p] of this.pending) {

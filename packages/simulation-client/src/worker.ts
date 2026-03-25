@@ -24,6 +24,7 @@ type WasmModule = {
     getState(): string
     getRecentEvents(): string
     pendingEvents(): number
+    injectFailure(json: string): void
   }
 }
 
@@ -101,6 +102,11 @@ async function handleRequest(req: WorkerRequest): Promise<WorkerResponse> {
           currentTime: sim.currentTime(),
           pendingEvents: sim.pendingEvents(),
         })
+
+      case 'INJECT_FAILURE':
+        sim.injectFailure(req.json)
+        drainEvents()
+        return ok(req.id, { kind: 'void' })
 
       default: {
         const r = req as { id: number; type: string }

@@ -132,6 +132,15 @@ impl Simulation {
     pub fn pending_events(&self) -> usize {
         self.engine.pending()
     }
+
+    /// Inject a failure mid-simulation. Takes a JSON string representing
+    /// a `FailureInjection` enum variant.
+    pub fn inject_failure(&mut self, json: &str) -> Result<(), JsValue> {
+        let failure: simulation_core::FailureInjection = serde_json::from_str(json)
+            .map_err(|e| JsValue::from_str(&format!("Invalid failure injection: {}", e)))?;
+        self.engine.inject_failure(&failure);
+        Ok(())
+    }
 }
 
 /// Wrapper for serialising recent events.

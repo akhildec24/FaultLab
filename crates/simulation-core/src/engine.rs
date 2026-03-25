@@ -130,6 +130,66 @@ impl Engine {
         steps
     }
 
+    /// Inject a failure mid-simulation. This mutates runtime state
+    /// (node health, connection state, capacity) and records the
+    /// corresponding event in the event history.
+    pub fn inject_failure(&mut self, failure: &FailureInjection) {
+        let time = self.now();
+        match failure {
+            FailureInjection::Crash { node_id } => {
+                if let Some(node) = self.state.nodes.get_mut(node_id) {
+                    node.state = NodeState::Failed;
+                }
+                self.handle_event(
+                    time,
+                    Event::NodeFailed {
+                        node_id: node_id.clone(),
+                    },
+                );
+            }
+            FailureInjection::Recover { node_id } => {
+                if let Some(node) = self.state.nodes.get_mut(node_id) {
+                    node.state = NodeState::Healthy;
+                }
+                self.handle_event(
+                    time,
+                    Event::NodeRecovered {
+                        node_id: node_id.clone(),
+                    },
+                );
+            }
+            FailureInjection::AddLatency {
+                node_id,
+                latency_ms,
+            } => {
+                if let Some(node) = self.scenario.nodes.iter_mut().find(|n| &n.id == node_id) {
+                    node.latency_ms += *latency_ms;
+                }
+            }
+            FailureInjection::AddPacketLoss { from, to, rate } => {
+                self.state.network.inject_packet_loss(from, to, *rate);
+            }
+            FailureInjection::Disconnect { from, to } => {
+                self.state.network.disconnect(from, to);
+                self.handle_event(
+                    time,
+                    Event::ConnectionFailed {
+                        from: from.clone(),
+                        to: to.clone(),
+                    },
+                );
+            }
+            FailureInjection::ReduceCapacity {
+                node_id,
+                new_capacity,
+            } => {
+                if let Some(node) = self.scenario.nodes.iter_mut().find(|n| &n.id == node_id) {
+                    node.capacity = *new_capacity;
+                }
+            }
+        }
+    }
+
     fn schedule_traffic(&mut self) {
         let client_ids: Vec<String> = self
             .scenario
@@ -1208,6 +1268,118 @@ mod tests {
             t.millis() >= 450 && t.millis() <= 560,
             "transit time should include injected latency, got {}ms",
             t.millis()
+        );
+    }
+
+    #[test]
+    fn inject_crash_sets_node_failed_and_emits_event() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::Crash {
+            node_id: "checkout-api".into(),
+        });
+        assert_eq!(
+            engine.state().nodes.get("checkout-api").unwrap().state,
+            NodeState::Failed
+        );
+        // Should have a NodeFailed event in recent_events
+        let events = engine.recent_events();
+        assert!(events.iter().any(|(_, e)| matches!(
+            e,
+            Event::NodeFailed { node_id } if node_id == "checkout-api"
+        )));
+    }
+
+    #[test]
+    fn inject_recover_sets_node_healthy_and_emits_event() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::Crash {
+            node_id: "checkout-api".into(),
+        });
+        engine.inject_failure(&FailureInjection::Recover {
+            node_id: "checkout-api".into(),
+        });
+        assert_eq!(
+            engine.state().nodes.get("checkout-api").unwrap().state,
+            NodeState::Healthy
+        );
+        let events = engine.recent_events();
+        assert!(events.iter().any(|(_, e)| matches!(
+            e,
+            Event::NodeRecovered { node_id } if node_id == "checkout-api"
+        )));
+    }
+
+    #[test]
+    fn inject_disconnect_breaks_connection_and_emits_event() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::Disconnect {
+            from: "client".into(),
+            to: "checkout-api".into(),
+        });
+        assert!(!engine
+            .state()
+            .network
+            .is_connected("client", "checkout-api"));
+        let events = engine.recent_events();
+        assert!(events.iter().any(|(_, e)| matches!(
+            e,
+            Event::ConnectionFailed { from, to } if from == "client" && to == "checkout-api"
+        )));
+    }
+
+    #[test]
+    fn inject_reduce_capacity_changes_scenario() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::ReduceCapacity {
+            node_id: "checkout-api".into(),
+            new_capacity: 1,
+        });
+        let cap = engine
+            .scenario()
+            .nodes
+            .iter()
+            .find(|n| n.id == "checkout-api")
+            .unwrap()
+            .capacity;
+        assert_eq!(cap, 1);
+    }
+
+    #[test]
+    fn inject_add_latency_affects_node_latency() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::AddLatency {
+            node_id: "checkout-api".into(),
+            latency_ms: 500,
+        });
+        let latency = engine
+            .scenario()
+            .nodes
+            .iter()
+            .find(|n| n.id == "checkout-api")
+            .unwrap()
+            .latency_ms;
+        assert_eq!(
+            latency,
+            20 + 500,
+            "node latency should include injected amount"
+        );
+    }
+
+    #[test]
+    fn inject_add_packet_loss_increases_loss_rate() {
+        let mut engine = Engine::new(three_node_scenario());
+        engine.inject_failure(&FailureInjection::AddPacketLoss {
+            from: "client".into(),
+            to: "checkout-api".into(),
+            rate: 0.9,
+        });
+        // With 90% injected loss, most requests should fail
+        engine.start();
+        engine.run(100);
+        let m = engine.metrics();
+        assert!(
+            m.failed > 0 || m.dropped > 0,
+            "high packet loss should cause failures"
         );
     }
 }

@@ -64,6 +64,7 @@ export interface WasmSimulation {
   getState(): string;
   getRecentEvents(): string;
   pendingEvents(): number;
+  injectFailure(json: string): void;
 }
 
 /**
@@ -138,5 +139,9 @@ export class Simulation {
 
   pendingEvents(): number {
     return this.inner.pendingEvents();
+  }
+
+  injectFailure(json: string): void {
+    this.inner.injectFailure(json);
   }
 }

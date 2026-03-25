@@ -20,6 +20,7 @@ export type WorkerRequest =
   | { id: number; type: 'GET_STATE' }
   | { id: number; type: 'GET_RECENT_EVENTS' }
   | { id: number; type: 'GET_STATUS' }
+  | { id: number; type: 'INJECT_FAILURE'; json: string }
 
 // --- Response messages (Worker → UI) ---
 
