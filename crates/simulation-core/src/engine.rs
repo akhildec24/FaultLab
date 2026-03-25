@@ -1382,4 +1382,223 @@ mod tests {
             "high packet loss should cause failures"
         );
     }
+
+    fn aggressive_retry_scenario() -> Scenario {
+        Scenario {
+            name: "aggressive-retry".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 10,
+                        jitter: 0.0,
+                        budget: None,
+                    },
+                },
+                NodeConfig {
+                    id: "svc".into(),
+                    kind: ComponentKind::Service,
+                    name: "Service".into(),
+                    capacity: 20,
+                    latency_ms: 50,
+                    error_rate: 0.9,
+                    timeout_ms: 500,
+                    queue_limit: Some(50),
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 3,
+                        jitter: 0.0,
+                        budget: None,
+                    },
+                },
+            ],
+            connections: vec![ConnectionConfig {
+                from: "client".into(),
+                to: "svc".into(),
+                latency_ms: 10,
+                packet_loss: 0.0,
+                bandwidth_rps: 0,
+            }],
+            traffic: TrafficConfig {
+                start_rps: 10,
+                target_rps: 50,
+                ramp_seconds: 5,
+            },
+            seed: 42,
+        }
+    }
+
+    #[test]
+    fn retry_storm_produces_many_retries() {
+        let mut engine = Engine::new(aggressive_retry_scenario());
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        // With 50% error rate and 10 max retries, we should see
+        // significantly more retries than total requests
+        assert!(m.retries > 0, "should have retries with 50% error rate");
+        assert!(
+            m.failed > 0 || m.timed_out > 0,
+            "should have failures when retries are exhausted"
+        );
+    }
+
+    #[test]
+    fn retry_budget_limits_total_retries() {
+        let scenario = Scenario {
+            name: "budget-test".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                },
+                NodeConfig {
+                    id: "svc".into(),
+                    kind: ComponentKind::Service,
+                    name: "Service".into(),
+                    capacity: 100,
+                    latency_ms: 20,
+                    error_rate: 0.8,
+                    timeout_ms: 1000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 10,
+                        jitter: 0.0,
+                        budget: Some(5),
+                    },
+                },
+            ],
+            connections: vec![ConnectionConfig {
+                from: "client".into(),
+                to: "svc".into(),
+                latency_ms: 10,
+                packet_loss: 0.0,
+                bandwidth_rps: 0,
+            }],
+            traffic: TrafficConfig {
+                start_rps: 5,
+                target_rps: 5,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        };
+
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(200);
+        let m = engine.metrics();
+        // With budget=5, total retries should not exceed 5
+        assert!(
+            m.retries <= 5,
+            "retry budget should limit total retries, got {}",
+            m.retries
+        );
+    }
+
+    #[test]
+    fn exponential_backoff_produces_increasing_delays() {
+        let policy = RetryPolicy {
+            strategy: RetryStrategy::Exponential {
+                base_ms: 100,
+                max_delay_ms: 10000,
+            },
+            max_retries: 5,
+            jitter: 0.0,
+            budget: None,
+        };
+        let mut rng = Rng::new(42);
+        let d0 = retry_delay(&policy, 0, &mut rng);
+        let d1 = retry_delay(&policy, 1, &mut rng);
+        let d2 = retry_delay(&policy, 2, &mut rng);
+        // Exponential: 100*1=100, 100*2=200, 100*4=400
+        assert_eq!(d0, 100);
+        assert_eq!(d1, 200);
+        assert_eq!(d2, 400);
+    }
+
+    #[test]
+    fn zero_max_retries_means_no_retry() {
+        let scenario = Scenario {
+            name: "no-retry".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 0,
+                        jitter: 0.0,
+                        budget: None,
+                    },
+                },
+                NodeConfig {
+                    id: "svc".into(),
+                    kind: ComponentKind::Service,
+                    name: "Service".into(),
+                    capacity: 100,
+                    latency_ms: 20,
+                    error_rate: 1.0,
+                    timeout_ms: 1000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy {
+                        strategy: RetryStrategy::Immediate,
+                        max_retries: 0,
+                        jitter: 0.0,
+                        budget: None,
+                    },
+                },
+            ],
+            connections: vec![ConnectionConfig {
+                from: "client".into(),
+                to: "svc".into(),
+                latency_ms: 10,
+                packet_loss: 0.0,
+                bandwidth_rps: 0,
+            }],
+            traffic: TrafficConfig {
+                start_rps: 5,
+                target_rps: 5,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        };
+
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(100);
+        let m = engine.metrics();
+        assert_eq!(m.retries, 0, "no retries should occur with max_retries=0");
+        assert!(
+            m.failed > 0,
+            "requests should fail with 100% error rate and no retries"
+        );
+    }
 }

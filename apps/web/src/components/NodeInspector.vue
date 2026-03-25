@@ -8,7 +8,7 @@
 
 import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
-import type { NodeKind } from '@/graph/types'
+import type { NodeKind, RetryStrategyType } from '@/graph/types'
 
 const graph = useGraphStore()
 
@@ -55,6 +55,34 @@ function updateQueueLimit(value: string): void {
   }
 }
 
+function updateRetryPolicy(patch: Record<string, unknown>): void {
+  if (!node.value) return
+  update({ retry_policy: { ...node.value.retry_policy, ...patch } })
+}
+
+function updateRetryStrategy(value: string): void {
+  updateRetryPolicy({ strategy: value as RetryStrategyType })
+}
+
+function updateRetryNumber(field: string, value: string): void {
+  const num = parseInt(value, 10)
+  updateRetryPolicy({ [field]: isNaN(num) ? 0 : num })
+}
+
+function updateRetryFloat(field: string, value: string): void {
+  const num = parseFloat(value)
+  updateRetryPolicy({ [field]: isNaN(num) ? 0 : num })
+}
+
+function updateRetryBudget(value: string): void {
+  if (value === '' || value === 'none') {
+    updateRetryPolicy({ budget: null })
+  } else {
+    const num = parseInt(value, 10)
+    updateRetryPolicy({ budget: isNaN(num) ? null : num })
+  }
+}
+
 function deleteNode(): void {
   if (node.value) graph.removeNode(node.value.id)
 }
@@ -63,6 +91,12 @@ const kindOptions: { value: NodeKind; label: string }[] = [
   { value: 'client', label: 'Client' },
   { value: 'service', label: 'Service' },
   { value: 'database', label: 'Database' },
+]
+
+const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
+  { value: 'immediate', label: 'Immediate' },
+  { value: 'fixed', label: 'Fixed delay' },
+  { value: 'exponential', label: 'Exponential backoff' },
 ]
 </script>
 
@@ -189,6 +223,71 @@ const kindOptions: { value: NodeKind; label: string }[] = [
         <span class="inspector__error" v-if="errors.queue_limit">{{ errors.queue_limit }}</span>
         <span class="inspector__hint" v-else>Max queued requests (empty = no queue)</span>
       </div>
+
+      <!-- Retry policy section -->
+      <div class="inspector__section-title">Retry Policy</div>
+
+      <!-- Retry strategy -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-retry-strategy">Strategy</label>
+        <select
+          id="node-retry-strategy"
+          class="inspector__input inspector__select"
+          :value="node.retry_policy.strategy"
+          @change="updateRetryStrategy(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="opt in retryStrategyOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+        <span class="inspector__hint">How delays between retries are calculated</span>
+      </div>
+
+      <!-- Max retries -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-retry-max">Max retries</label>
+        <input
+          id="node-retry-max"
+          class="inspector__input"
+          type="number"
+          min="0"
+          max="20"
+          :value="node.retry_policy.max_retries"
+          @input="updateRetryNumber('max_retries', ($event.target as HTMLInputElement).value)"
+        />
+        <span class="inspector__hint">Number of retry attempts before giving up</span>
+      </div>
+
+      <!-- Jitter -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-retry-jitter">Jitter</label>
+        <input
+          id="node-retry-jitter"
+          class="inspector__input"
+          type="number"
+          min="0"
+          max="1"
+          step="0.05"
+          :value="node.retry_policy.jitter"
+          @input="updateRetryFloat('jitter', ($event.target as HTMLInputElement).value)"
+        />
+        <span class="inspector__hint">Random variation in delay (0 = none, 0.3 = ±30%)</span>
+      </div>
+
+      <!-- Retry budget -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-retry-budget">Retry budget</label>
+        <input
+          id="node-retry-budget"
+          class="inspector__input"
+          type="number"
+          min="0"
+          placeholder="none"
+          :value="node.retry_policy.budget ?? ''"
+          @input="updateRetryBudget(($event.target as HTMLInputElement).value)"
+        />
+        <span class="inspector__hint">Max total retries across all requests (empty = unlimited)</span>
+      </div>
     </div>
 
     <div class="inspector__footer" v-if="!isValid">
@@ -304,5 +403,17 @@ const kindOptions: { value: NodeKind; label: string }[] = [
   font-size: var(--fl-size-14);
   color: var(--fl-red-hover);
   font-weight: 600;
+}
+
+.inspector__section-title {
+  font-size: var(--fl-size-14);
+  font-weight: 700;
+  color: var(--fl-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--fl-space-2);
+  margin-bottom: var(--fl-space-1);
+  padding-top: var(--fl-space-2);
+  border-top: 1px solid var(--fl-border);
 }
 </style>

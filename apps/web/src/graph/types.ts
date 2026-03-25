@@ -7,6 +7,15 @@
 
 export type NodeKind = 'client' | 'service' | 'database'
 
+export type RetryStrategyType = 'immediate' | 'fixed' | 'exponential'
+
+export interface RetryPolicy {
+  strategy: RetryStrategyType
+  max_retries: number
+  jitter: number
+  budget: number | null
+}
+
 export interface GraphNode {
   id: string
   kind: NodeKind
@@ -19,6 +28,7 @@ export interface GraphNode {
   error_rate: number
   timeout_ms: number
   queue_limit: number | null
+  retry_policy: RetryPolicy
 }
 
 export interface GraphEdge {
@@ -72,6 +82,7 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     error_rate: 0,
     timeout_ms: 5000,
     queue_limit: null,
+    retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
   },
   service: {
     kind: 'service',
@@ -81,6 +92,7 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     error_rate: 0,
     timeout_ms: 1000,
     queue_limit: 100,
+    retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
   },
   database: {
     kind: 'database',
@@ -90,6 +102,7 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     error_rate: 0,
     timeout_ms: 2000,
     queue_limit: 50,
+    retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
   },
 }
 

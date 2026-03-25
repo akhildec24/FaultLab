@@ -22,6 +22,7 @@ export interface ScenarioNode {
     strategy: string
     max_retries: number
     jitter: number
+    budget?: number | null
   }
 }
 
@@ -171,9 +172,10 @@ export function graphToScenario(
     timeout_ms: n.timeout_ms,
     queue_limit: n.queue_limit,
     retry_policy: {
-      strategy: 'immediate',
-      max_retries: 3,
-      jitter: 0,
+      strategy: n.retry_policy.strategy,
+      max_retries: n.retry_policy.max_retries,
+      jitter: n.retry_policy.jitter,
+      budget: n.retry_policy.budget,
     },
   }))
 

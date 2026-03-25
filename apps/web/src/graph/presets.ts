@@ -33,6 +33,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 5000,
       queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
     },
     {
       kind: 'service',
@@ -44,6 +45,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 1000,
       queue_limit: 100,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
     },
     {
       kind: 'database',
@@ -55,6 +57,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 2000,
       queue_limit: 30,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
     },
   ],
   edges: [
@@ -80,6 +83,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 5000,
       queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
     },
     {
       kind: 'client',
@@ -91,6 +95,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 5000,
       queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
     },
     {
       kind: 'service',
@@ -102,6 +107,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 1000,
       queue_limit: 80,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
     },
     {
       kind: 'service',
@@ -113,6 +119,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       error_rate: 0,
       timeout_ms: 1000,
       queue_limit: 80,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
     },
     {
       kind: 'database',
@@ -124,6 +131,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       error_rate: 0.05,
       timeout_ms: 1500,
       queue_limit: 20,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
     },
   ],
   edges: [
@@ -151,6 +159,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       error_rate: 0,
       timeout_ms: 3000,
       queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
     },
     {
       kind: 'service',
@@ -162,6 +171,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       error_rate: 0,
       timeout_ms: 800,
       queue_limit: 50,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
     },
     {
       kind: 'database',
@@ -173,6 +183,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       error_rate: 0,
       timeout_ms: 2000,
       queue_limit: 40,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
     },
   ],
   edges: [
@@ -182,10 +193,61 @@ export const NETWORK_PARTITION: PresetScenario = {
   connections: [[0, 1], [1, 2]],
 }
 
+/** Retry storm — aggressive retries on a failing service amplify load. */
+export const RETRY_STORM: PresetScenario = {
+  id: 'retry-storm',
+  name: 'Retry Storm',
+  description: 'A client retries aggressively against a service with 30% error rate. Immediate retries with no budget amplify load — watch retries skyrocket and the service collapse.',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Aggressive Client',
+      x: 80,
+      y: 180,
+      capacity: 100,
+      latency_ms: 5,
+      error_rate: 0,
+      timeout_ms: 2000,
+      queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
+    },
+    {
+      kind: 'service',
+      label: 'Flaky Service',
+      x: 340,
+      y: 180,
+      capacity: 20,
+      latency_ms: 50,
+      error_rate: 0.3,
+      timeout_ms: 500,
+      queue_limit: 50,
+      retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
+    },
+    {
+      kind: 'database',
+      label: 'Backend DB',
+      x: 600,
+      y: 180,
+      capacity: 15,
+      latency_ms: 30,
+      error_rate: 0,
+      timeout_ms: 1000,
+      queue_limit: 30,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+    },
+  ],
+  edges: [
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2]],
+}
+
 export const PRESETS: PresetScenario[] = [
   OVERLOADED_DATABASE,
   CASCADING_FAILURE,
   NETWORK_PARTITION,
+  RETRY_STORM,
 ]
 
 /** Convert a preset into graph nodes and edges with generated IDs. */
