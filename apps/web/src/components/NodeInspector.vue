@@ -8,7 +8,7 @@
 
 import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
-import type { NodeKind, RetryStrategyType } from '@/graph/types'
+import type { NodeKind, RetryStrategyType, SheddingPolicyType } from '@/graph/types'
 import { NODE_COLORS, NODE_ICONS } from '@/graph/types'
 
 const graph = useGraphStore()
@@ -99,6 +99,16 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
   { value: 'fixed', label: 'Fixed delay' },
   { value: 'exponential', label: 'Exponential backoff' },
 ]
+
+const shedPolicyOptions: { value: SheddingPolicyType; label: string }[] = [
+  { value: 'drop', label: 'Drop' },
+  { value: 'reject', label: 'Reject (retry)' },
+  { value: 'backpressure', label: 'Backpressure' },
+]
+
+function updateShedPolicy(value: string): void {
+  update({ shed_policy: value as SheddingPolicyType })
+}
 </script>
 
 <template>
@@ -294,6 +304,25 @@ const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [
           @input="updateRetryBudget(($event.target as HTMLInputElement).value)"
         />
         <span class="inspector__hint">Max total retries across all requests (empty = unlimited)</span>
+      </div>
+
+      <!-- Load shedding section -->
+      <div class="inspector__section-title">Load Shedding</div>
+
+      <!-- Shedding policy -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-shed-policy">Policy</label>
+        <select
+          id="node-shed-policy"
+          class="inspector__input inspector__select"
+          :value="node.shed_policy"
+          @change="updateShedPolicy(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="opt in shedPolicyOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+        <span class="inspector__hint">What happens when the queue is full</span>
       </div>
     </div>
 

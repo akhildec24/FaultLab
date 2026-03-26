@@ -265,7 +265,15 @@ impl Engine {
                         // Over capacity — check queue
                         let queue_limit = config.and_then(|c| c.queue_limit).unwrap_or(0);
                         if node.queue_depth < queue_limit {
+                            // Enqueue — add to waiting queue
                             node.queue_depth += 1;
+                            if let Some(queue) = self.state.waiting_queues.get_mut(&node_id) {
+                                queue.push_back(request_id);
+                            } else {
+                                let mut q = std::collections::VecDeque::new();
+                                q.push_back(request_id);
+                                self.state.waiting_queues.insert(node_id.clone(), q);
+                            }
                             self.scheduler.schedule(
                                 time,
                                 Event::MessageQueued {
@@ -274,13 +282,17 @@ impl Engine {
                                 },
                             );
                         } else {
-                            // Queue full — drop
-                            node.total_dropped += 1;
+                            // Queue full — apply shedding policy
+                            let policy = config
+                                .map(|c| c.shed_policy.clone())
+                                .unwrap_or(SheddingPolicy::Drop);
+                            node.total_shedded += 1;
                             self.scheduler.schedule(
                                 time,
-                                Event::MessageDropped {
+                                Event::RequestShedded {
                                     request_id,
-                                    queue_id: node_id,
+                                    node_id: node_id.clone(),
+                                    policy: policy.clone(),
                                 },
                             );
                         }
@@ -366,6 +378,7 @@ impl Engine {
                     node.active_requests = node.active_requests.saturating_sub(1);
                 }
 
+                self.try_dequeue(&node_id);
                 self.maybe_retry(request_id, &node_id, time);
             }
 
@@ -405,7 +418,6 @@ impl Engine {
 
             Event::MessageQueued { .. } => {
                 // Request is queued; will be dequeued when capacity frees up.
-                // For now, we don't model dequeue — simplified for Day 4.
             }
 
             Event::MessageDropped {
@@ -417,6 +429,47 @@ impl Engine {
                     req.outcome = Some(RequestOutcome::Dropped);
                 }
                 self.state.metrics.dropped += 1;
+            }
+
+            Event::RequestShedded {
+                request_id,
+                node_id,
+                policy,
+            } => {
+                self.state.metrics.shedded += 1;
+                match policy {
+                    SheddingPolicy::Drop => {
+                        // Silently drop the request
+                        if let Some(req) = self.state.requests.get_mut(&request_id) {
+                            req.phase = RequestPhase::Done;
+                            req.outcome = Some(RequestOutcome::Dropped);
+                        }
+                    }
+                    SheddingPolicy::Reject => {
+                        // Reject with error — triggers retry if configured
+                        if let Some(req) = self.state.requests.get_mut(&request_id) {
+                            req.phase = RequestPhase::PendingRetry;
+                            req.outcome = Some(RequestOutcome::Failed);
+                        }
+                        self.maybe_retry(request_id, &node_id, time);
+                    }
+                    SheddingPolicy::Backpressure => {
+                        // Drop and record backpressure — in a real system
+                        // this would signal upstream to slow down
+                        if let Some(req) = self.state.requests.get_mut(&request_id) {
+                            req.phase = RequestPhase::Done;
+                            req.outcome = Some(RequestOutcome::Dropped);
+                        }
+                    }
+                }
+            }
+
+            Event::RequestDequeued {
+                request_id,
+                node_id,
+            } => {
+                // A queued request now has capacity — start processing
+                self.start_processing(request_id, &node_id, time);
             }
 
             Event::NodeFailed { node_id } => {
@@ -508,6 +561,53 @@ impl Engine {
             } else {
                 node.total_failed += 1;
             }
+        }
+        // Try to dequeue a waiting request now that capacity freed up
+        self.try_dequeue(node_id);
+    }
+
+    /// Try to dequeue a waiting request from a node's queue.
+    /// Called when a request completes or times out, freeing capacity.
+    fn try_dequeue(&mut self, node_id: &str) {
+        // Check if there's capacity and a waiting queue
+        let capacity = self
+            .scenario
+            .nodes
+            .iter()
+            .find(|n| n.id == node_id)
+            .map(|c| c.capacity)
+            .unwrap_or(0);
+
+        let active = self
+            .state
+            .nodes
+            .get(node_id)
+            .map(|n| n.active_requests)
+            .unwrap_or(0);
+
+        if active >= capacity {
+            return;
+        }
+
+        // Pop from waiting queue
+        let dequeued = self
+            .state
+            .waiting_queues
+            .get_mut(node_id)
+            .and_then(|q| q.pop_front());
+
+        if let Some(req_id) = dequeued {
+            if let Some(node) = self.state.nodes.get_mut(node_id) {
+                node.queue_depth = node.queue_depth.saturating_sub(1);
+            }
+            // Schedule dequeue event at current time
+            self.scheduler.schedule(
+                self.state.current_time,
+                Event::RequestDequeued {
+                    request_id: req_id,
+                    node_id: node_id.to_string(),
+                },
+            );
         }
     }
 
@@ -610,6 +710,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -622,6 +723,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -654,6 +756,7 @@ mod tests {
                 queue_limit: None,
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             }],
             connections: vec![],
             traffic: TrafficConfig {
@@ -680,6 +783,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "checkout-api".into(),
@@ -692,6 +796,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "orders-db".into(),
@@ -704,6 +809,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![
@@ -746,6 +852,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "checkout-api".into(),
@@ -763,6 +870,7 @@ mod tests {
                         jitter: 0.0,
                         budget: None,
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "orders-db".into(),
@@ -775,6 +883,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![
@@ -1187,6 +1296,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1199,6 +1309,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1403,6 +1514,7 @@ mod tests {
                         jitter: 0.0,
                         budget: None,
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1420,6 +1532,7 @@ mod tests {
                         jitter: 0.0,
                         budget: None,
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1469,6 +1582,7 @@ mod tests {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1486,6 +1600,7 @@ mod tests {
                         jitter: 0.0,
                         budget: Some(5),
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1557,6 +1672,7 @@ mod tests {
                         jitter: 0.0,
                         budget: None,
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1574,6 +1690,7 @@ mod tests {
                         jitter: 0.0,
                         budget: None,
                     },
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1599,6 +1716,99 @@ mod tests {
         assert!(
             m.failed > 0,
             "requests should fail with 100% error rate and no retries"
+        );
+    }
+
+    fn queue_scenario(shed_policy: SheddingPolicy) -> Scenario {
+        Scenario {
+            name: "queue-test".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                },
+                NodeConfig {
+                    id: "svc".into(),
+                    kind: ComponentKind::Service,
+                    name: "Service".into(),
+                    capacity: 1,
+                    latency_ms: 50,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: Some(5),
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy,
+                },
+            ],
+            connections: vec![ConnectionConfig {
+                from: "client".into(),
+                to: "svc".into(),
+                latency_ms: 10,
+                packet_loss: 0.0,
+                bandwidth_rps: 0,
+            }],
+            traffic: TrafficConfig {
+                start_rps: 50,
+                target_rps: 50,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        }
+    }
+
+    #[test]
+    fn queue_dequeues_when_capacity_frees() {
+        let mut engine = Engine::new(queue_scenario(SheddingPolicy::Drop));
+        engine.start();
+        engine.run(2000);
+        let m = engine.metrics();
+        assert!(m.successful > 0, "dequeued requests should succeed");
+        assert!(
+            m.shedded > 0,
+            "excess requests beyond queue should be shedded"
+        );
+    }
+
+    #[test]
+    fn shed_policy_drop_silently_drops() {
+        let mut engine = Engine::new(queue_scenario(SheddingPolicy::Drop));
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        assert!(m.shedded > 0, "Drop policy should shed requests");
+        assert_eq!(m.retries, 0, "Drop policy should not trigger retries");
+    }
+
+    #[test]
+    fn shed_policy_reject_triggers_retry() {
+        let mut engine = Engine::new(queue_scenario(SheddingPolicy::Reject));
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        assert!(m.shedded > 0, "Reject policy should shed requests");
+        assert!(m.retries > 0, "Reject policy should trigger retries");
+    }
+
+    #[test]
+    fn shed_policy_backpressure_drops_without_retry() {
+        let mut engine = Engine::new(queue_scenario(SheddingPolicy::Backpressure));
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        assert!(m.shedded > 0, "Backpressure policy should shed requests");
+        assert_eq!(
+            m.retries, 0,
+            "Backpressure policy should not trigger retries"
         );
     }
 }

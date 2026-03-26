@@ -223,6 +223,7 @@ mod tests {
                 queue_limit: None,
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             },
             NodeConfig {
                 id: "svc".into(),
@@ -235,6 +236,7 @@ mod tests {
                 queue_limit: None,
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             },
         ];
         let conns = vec![make_connection("client", "svc", 10, 0.0)];
@@ -258,6 +260,7 @@ mod tests {
             queue_limit: None,
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
+            shed_policy: SheddingPolicy::default(),
         };
         let t = processing_time(&node, &mut rng);
         // ±10% of 50 = [45, 55]
@@ -278,6 +281,7 @@ mod tests {
             queue_limit: None,
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
+            shed_policy: SheddingPolicy::default(),
         };
         for _ in 0..100 {
             assert!(!should_fail(&node, &mut rng));
@@ -298,6 +302,7 @@ mod tests {
             queue_limit: None,
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
+            shed_policy: SheddingPolicy::default(),
         };
         for _ in 0..100 {
             assert!(should_fail(&node, &mut rng));

@@ -31,6 +31,7 @@ fn arb_scenario() -> impl Strategy<Value = Scenario> {
                 queue_limit: None,
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             })
             .collect();
 
@@ -157,6 +158,7 @@ proptest! {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -169,6 +171,7 @@ proptest! {
                     queue_limit: None,
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
                 },
             ],
             connections: vec![ConnectionConfig {

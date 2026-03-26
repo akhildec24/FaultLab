@@ -34,6 +34,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       timeout_ms: 5000,
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'service',
@@ -46,6 +47,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       timeout_ms: 1000,
       queue_limit: 100,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'database',
@@ -58,6 +60,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       timeout_ms: 2000,
       queue_limit: 30,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
   ],
   edges: [
@@ -84,6 +87,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       timeout_ms: 5000,
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'client',
@@ -96,6 +100,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       timeout_ms: 5000,
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'service',
@@ -108,6 +113,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       timeout_ms: 1000,
       queue_limit: 80,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'service',
@@ -120,6 +126,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       timeout_ms: 1000,
       queue_limit: 80,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'database',
@@ -132,6 +139,7 @@ export const CASCADING_FAILURE: PresetScenario = {
       timeout_ms: 1500,
       queue_limit: 20,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
   ],
   edges: [
@@ -160,6 +168,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       timeout_ms: 3000,
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'service',
@@ -172,6 +181,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       timeout_ms: 800,
       queue_limit: 50,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'database',
@@ -184,6 +194,7 @@ export const NETWORK_PARTITION: PresetScenario = {
       timeout_ms: 2000,
       queue_limit: 40,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
   ],
   edges: [
@@ -210,6 +221,7 @@ export const RETRY_STORM: PresetScenario = {
       timeout_ms: 2000,
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'service',
@@ -222,6 +234,7 @@ export const RETRY_STORM: PresetScenario = {
       timeout_ms: 500,
       queue_limit: 50,
       retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
     {
       kind: 'database',
@@ -234,6 +247,7 @@ export const RETRY_STORM: PresetScenario = {
       timeout_ms: 1000,
       queue_limit: 30,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
     },
   ],
   edges: [
@@ -243,11 +257,65 @@ export const RETRY_STORM: PresetScenario = {
   connections: [[0, 1], [1, 2]],
 }
 
+/** Queue overflow — low capacity service with small queue demonstrates load shedding. */
+export const QUEUE_OVERFLOW: PresetScenario = {
+  id: 'queue-overflow',
+  name: 'Queue Overflow',
+  description: 'A high-traffic client overwhelms a low-capacity service with a small queue. Watch requests get shedded and dequeued as capacity frees up.',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Burst Client',
+      x: 80,
+      y: 180,
+      capacity: 100,
+      latency_ms: 5,
+      error_rate: 0,
+      timeout_ms: 3000,
+      queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 2, jitter: 0, budget: null },
+      shed_policy: 'drop',
+    },
+    {
+      kind: 'service',
+      label: 'Rate-Limited API',
+      x: 340,
+      y: 180,
+      capacity: 5,
+      latency_ms: 100,
+      error_rate: 0,
+      timeout_ms: 2000,
+      queue_limit: 10,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.1, budget: null },
+      shed_policy: 'reject',
+    },
+    {
+      kind: 'database',
+      label: 'Cache Store',
+      x: 600,
+      y: 180,
+      capacity: 30,
+      latency_ms: 10,
+      error_rate: 0,
+      timeout_ms: 500,
+      queue_limit: 50,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+    },
+  ],
+  edges: [
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2]],
+}
+
 export const PRESETS: PresetScenario[] = [
   OVERLOADED_DATABASE,
   CASCADING_FAILURE,
   NETWORK_PARTITION,
   RETRY_STORM,
+  QUEUE_OVERFLOW,
 ]
 
 /** Convert a preset into graph nodes and edges with generated IDs. */

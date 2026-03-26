@@ -14,7 +14,7 @@
 //! state, keep config) and to run the same scenario with different seeds.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 // ---------------------------------------------------------------------------
 // Virtual time
@@ -110,6 +110,20 @@ impl Default for RetryPolicy {
     }
 }
 
+/// Load shedding policy when a node's queue is full.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SheddingPolicy {
+    /// Drop the incoming request silently (default).
+    #[default]
+    Drop,
+    /// Reject with an error — triggers retry logic if configured.
+    Reject,
+    /// Apply backpressure — tell upstream to slow down.
+    /// In practice this drops the request and records a backpressure event.
+    Backpressure,
+}
+
 /// Immutable configuration for a node in the architecture graph.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeConfig {
@@ -124,6 +138,8 @@ pub struct NodeConfig {
     pub cache_hit_rate: Option<f64>,
     #[serde(default)]
     pub retry_policy: RetryPolicy,
+    #[serde(default)]
+    pub shed_policy: SheddingPolicy,
 }
 
 /// Immutable configuration for a directed connection between two nodes.
@@ -267,6 +283,8 @@ pub struct NodeRuntimeState {
     pub total_timed_out: u64,
     /// Total requests dropped (queue overflow).
     pub total_dropped: u64,
+    /// Total requests shed by load shedding policy.
+    pub total_shedded: u64,
     /// Remaining retry budget.
     pub retry_budget_remaining: Option<u32>,
 }
@@ -283,6 +301,7 @@ impl NodeRuntimeState {
             total_failed: 0,
             total_timed_out: 0,
             total_dropped: 0,
+            total_shedded: 0,
             retry_budget_remaining: retry_budget,
         }
     }
@@ -346,6 +365,15 @@ pub enum Event {
         request_id: u64,
         queue_id: String,
     },
+    RequestShedded {
+        request_id: u64,
+        node_id: String,
+        policy: SheddingPolicy,
+    },
+    RequestDequeued {
+        request_id: u64,
+        node_id: String,
+    },
     ConnectionFailed {
         from: String,
         to: String,
@@ -385,6 +413,7 @@ pub struct Metrics {
     pub timed_out: u64,
     pub retries: u64,
     pub dropped: u64,
+    pub shedded: u64,
     pub current_rps: f64,
     pub avg_latency_ms: f64,
     pub p50_latency_ms: f64,
@@ -412,6 +441,8 @@ pub struct SimulationState {
     pub next_request_id: u64,
     pub metrics: Metrics,
     pub completed_latencies: Vec<u64>,
+    /// Per-node FIFO queue of request IDs waiting for capacity.
+    pub waiting_queues: HashMap<String, VecDeque<u64>>,
 }
 
 impl SimulationState {
@@ -433,6 +464,7 @@ impl SimulationState {
             next_request_id: 1,
             metrics: Metrics::default(),
             completed_latencies: Vec::new(),
+            waiting_queues: HashMap::new(),
         }
     }
 }
@@ -503,6 +535,7 @@ mod tests {
                 queue_limit: None,
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             }],
             connections: vec![],
             traffic: TrafficConfig {

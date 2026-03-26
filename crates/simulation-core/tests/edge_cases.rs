@@ -18,6 +18,7 @@ fn make_node(id: &str, kind: ComponentKind, capacity: u32) -> NodeConfig {
         queue_limit: None,
         cache_hit_rate: None,
         retry_policy: RetryPolicy::default(),
+        shed_policy: SheddingPolicy::default(),
     }
 }
 
@@ -155,6 +156,7 @@ fn zero_capacity_node_drops_all_requests() {
                 queue_limit: Some(0), // No queue either
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
+                shed_policy: SheddingPolicy::default(),
             },
         ],
         connections: vec![ConnectionConfig {
@@ -178,8 +180,12 @@ fn zero_capacity_node_drops_all_requests() {
 
     let m = engine.metrics();
     assert!(m.total_requests > 0);
-    // All requests should be dropped (capacity 0, queue 0)
-    assert_eq!(m.dropped, m.total_requests, "all should be dropped");
+    // All requests should be dropped or shedded (capacity 0, queue 0)
+    assert_eq!(
+        m.dropped + m.shedded,
+        m.total_requests,
+        "all should be dropped or shedded"
+    );
 }
 
 #[test]

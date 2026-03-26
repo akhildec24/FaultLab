@@ -24,6 +24,7 @@ export interface ScenarioNode {
     jitter: number
     budget?: number | null
   }
+  shed_policy: { type: string }
 }
 
 export interface ScenarioConnection {
@@ -177,6 +178,7 @@ export function graphToScenario(
       jitter: n.retry_policy.jitter,
       budget: n.retry_policy.budget,
     },
+    shed_policy: { type: n.shed_policy },
   }))
 
   const scenarioConnections: ScenarioConnection[] = edges.map((e) => ({
