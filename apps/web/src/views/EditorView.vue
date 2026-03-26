@@ -6,6 +6,7 @@ import EdgeInspector from '@/components/EdgeInspector.vue'
 import SimulationControls from '@/components/SimulationControls.vue'
 import EventTimeline from '@/components/EventTimeline.vue'
 import Dashboard from '@/components/Dashboard.vue'
+import CodeEditor from '@/components/CodeEditor.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
@@ -17,7 +18,7 @@ const animation = useAnimationStore()
 
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
 const showTimeline = ref(false)
-const bottomTab = ref<'timeline' | 'dashboard'>('timeline')
+const bottomTab = ref<'timeline' | 'dashboard' | 'code'>('timeline')
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
@@ -120,15 +121,22 @@ onUnmounted(() => {
         >
           Dashboard
         </button>
+        <button
+          :class="['bottom-tabs__btn', { 'is-active': bottomTab === 'code' }]"
+          @click="bottomTab = 'code'"
+        >
+          Code
+        </button>
       </div>
       <div class="bottom-content">
         <EventTimeline v-if="bottomTab === 'timeline'" />
-        <Dashboard v-else />
+        <Dashboard v-else-if="bottomTab === 'dashboard'" />
+        <CodeEditor v-else />
       </div>
     </div>
     <!-- Bottom panel toggle -->
     <button class="bottom-toggle" @click="showTimeline = !showTimeline">
-      {{ showTimeline ? '▼' : '▲' }} {{ bottomTab === 'timeline' ? 'Timeline' : 'Dashboard' }}
+      {{ showTimeline ? '▼' : '▲' }} {{ bottomTab === 'timeline' ? 'Timeline' : bottomTab === 'dashboard' ? 'Dashboard' : 'Code' }}
     </button>
   </div>
 </template>

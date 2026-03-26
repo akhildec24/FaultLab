@@ -237,7 +237,16 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       parse_dsl(), parse_dsl_with_failures(), parse_dsl_ast().
       24 parser tests (lexer, parser, validation, round-trip).
       146 tests total, clippy clean.
-- [ ] **Day 24** — Build the code editor.
+- [x] **Day 24** — Build the code editor. CodeEditor.vue with
+      syntax highlighting (keywords, strings, numbers, durations,
+      percents, comments, braces, arrows), line numbers with error
+      markers, error underlining (wavy red), tab-to-spaces, copy
+      button. Visual-to-code sync: graphToDsl() generates .fault
+      source from visual graph, auto-updates when graph changes.
+      Sync mode indicator (synced vs edited). Re-sync button.
+      validateDsl() basic TS-side validation (unclosed strings,
+      missing scenario, unbalanced braces). Third tab in bottom
+      panel (Timeline / Dashboard / Code). 146 tests total.
 - [ ] **Day 25** — Local-first storage.
 - [ ] **Day 26** — Gleam collaboration server.
 - [ ] **Day 27** — Multiplayer presence.
