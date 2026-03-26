@@ -224,6 +224,8 @@ mod tests {
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
                 shed_policy: SheddingPolicy::default(),
+                replication_role: ReplicationRole::default(),
+                replication_lag_ms: 0,
             },
             NodeConfig {
                 id: "svc".into(),
@@ -237,6 +239,8 @@ mod tests {
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
                 shed_policy: SheddingPolicy::default(),
+                replication_role: ReplicationRole::default(),
+                replication_lag_ms: 0,
             },
         ];
         let conns = vec![make_connection("client", "svc", 10, 0.0)];
@@ -261,6 +265,8 @@ mod tests {
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
             shed_policy: SheddingPolicy::default(),
+            replication_role: ReplicationRole::default(),
+            replication_lag_ms: 0,
         };
         let t = processing_time(&node, &mut rng);
         // ±10% of 50 = [45, 55]
@@ -282,6 +288,8 @@ mod tests {
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
             shed_policy: SheddingPolicy::default(),
+            replication_role: ReplicationRole::default(),
+            replication_lag_ms: 0,
         };
         for _ in 0..100 {
             assert!(!should_fail(&node, &mut rng));
@@ -303,6 +311,8 @@ mod tests {
             cache_hit_rate: None,
             retry_policy: RetryPolicy::default(),
             shed_policy: SheddingPolicy::default(),
+            replication_role: ReplicationRole::default(),
+            replication_lag_ms: 0,
         };
         for _ in 0..100 {
             assert!(should_fail(&node, &mut rng));

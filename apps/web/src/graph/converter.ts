@@ -25,6 +25,8 @@ export interface ScenarioNode {
     budget?: number | null
   }
   shed_policy: { type: string }
+  replication_role: string
+  replication_lag_ms: number
 }
 
 export interface ScenarioConnection {
@@ -179,6 +181,8 @@ export function graphToScenario(
       budget: n.retry_policy.budget,
     },
     shed_policy: { type: n.shed_policy },
+    replication_role: n.replication_role,
+    replication_lag_ms: n.replication_lag_ms,
   }))
 
   const scenarioConnections: ScenarioConnection[] = edges.map((e) => ({

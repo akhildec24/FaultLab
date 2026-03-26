@@ -35,6 +35,8 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -48,6 +50,8 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       queue_limit: 100,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'database',
@@ -61,6 +65,8 @@ export const OVERLOADED_DATABASE: PresetScenario = {
       queue_limit: 30,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
   ],
   edges: [
@@ -88,6 +94,8 @@ export const CASCADING_FAILURE: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'client',
@@ -101,6 +109,8 @@ export const CASCADING_FAILURE: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -114,6 +124,8 @@ export const CASCADING_FAILURE: PresetScenario = {
       queue_limit: 80,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -127,6 +139,8 @@ export const CASCADING_FAILURE: PresetScenario = {
       queue_limit: 80,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'database',
@@ -140,6 +154,8 @@ export const CASCADING_FAILURE: PresetScenario = {
       queue_limit: 20,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
   ],
   edges: [
@@ -169,6 +185,8 @@ export const NETWORK_PARTITION: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -182,6 +200,8 @@ export const NETWORK_PARTITION: PresetScenario = {
       queue_limit: 50,
       retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'database',
@@ -195,6 +215,8 @@ export const NETWORK_PARTITION: PresetScenario = {
       queue_limit: 40,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
   ],
   edges: [
@@ -222,6 +244,8 @@ export const RETRY_STORM: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -235,6 +259,8 @@ export const RETRY_STORM: PresetScenario = {
       queue_limit: 50,
       retry_policy: { strategy: 'immediate', max_retries: 10, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'database',
@@ -248,6 +274,8 @@ export const RETRY_STORM: PresetScenario = {
       queue_limit: 30,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
   ],
   edges: [
@@ -275,6 +303,8 @@ export const QUEUE_OVERFLOW: PresetScenario = {
       queue_limit: null,
       retry_policy: { strategy: 'immediate', max_retries: 2, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'service',
@@ -288,6 +318,8 @@ export const QUEUE_OVERFLOW: PresetScenario = {
       queue_limit: 10,
       retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.1, budget: null },
       shed_policy: 'reject',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
     {
       kind: 'database',
@@ -301,6 +333,8 @@ export const QUEUE_OVERFLOW: PresetScenario = {
       queue_limit: 50,
       retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
       shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
     },
   ],
   edges: [
@@ -310,12 +344,88 @@ export const QUEUE_OVERFLOW: PresetScenario = {
   connections: [[0, 1], [1, 2]],
 }
 
+/** Cache & replication — cache layer with 60% hit rate, leader/replica DB with lag. */
+export const CACHE_REPLICATION: PresetScenario = {
+  id: 'cache-replication',
+  name: 'Cache & Replication',
+  description: 'A cache layer with 60% hit rate fronts a leader database with a replica. Watch cache hits skip the DB, and stale reads from the replica due to replication lag.',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Read Client',
+      x: 80,
+      y: 200,
+      capacity: 100,
+      latency_ms: 5,
+      error_rate: 0,
+      timeout_ms: 5000,
+      queue_limit: null,
+      retry_policy: { strategy: 'immediate', max_retries: 2, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Cache Layer',
+      x: 340,
+      y: 120,
+      capacity: 80,
+      latency_ms: 5,
+      error_rate: 0,
+      timeout_ms: 500,
+      queue_limit: 200,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.1, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Leader DB',
+      x: 600,
+      y: 120,
+      capacity: 30,
+      latency_ms: 40,
+      error_rate: 0,
+      timeout_ms: 2000,
+      queue_limit: 50,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'leader',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Replica DB',
+      x: 600,
+      y: 300,
+      capacity: 30,
+      latency_ms: 40,
+      error_rate: 0,
+      timeout_ms: 2000,
+      queue_limit: 50,
+      retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'replica',
+      replication_lag_ms: 300,
+    },
+  ],
+  edges: [
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [2, 3]],
+}
+
 export const PRESETS: PresetScenario[] = [
   OVERLOADED_DATABASE,
   CASCADING_FAILURE,
   NETWORK_PARTITION,
   RETRY_STORM,
   QUEUE_OVERFLOW,
+  CACHE_REPLICATION,
 ]
 
 /** Convert a preset into graph nodes and edges with generated IDs. */

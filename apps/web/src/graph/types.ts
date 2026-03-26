@@ -11,6 +11,8 @@ export type RetryStrategyType = 'immediate' | 'fixed' | 'exponential'
 
 export type SheddingPolicyType = 'drop' | 'reject' | 'backpressure'
 
+export type ReplicationRoleType = 'standalone' | 'leader' | 'replica'
+
 export interface RetryPolicy {
   strategy: RetryStrategyType
   max_retries: number
@@ -32,6 +34,8 @@ export interface GraphNode {
   queue_limit: number | null
   retry_policy: RetryPolicy
   shed_policy: SheddingPolicyType
+  replication_role: ReplicationRoleType
+  replication_lag_ms: number
 }
 
 export interface GraphEdge {
@@ -87,6 +91,8 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     queue_limit: null,
     retry_policy: { strategy: 'immediate', max_retries: 3, jitter: 0, budget: null },
     shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
   },
   service: {
     kind: 'service',
@@ -98,6 +104,8 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     queue_limit: 100,
     retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
     shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
   },
   database: {
     kind: 'database',
@@ -109,6 +117,8 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     queue_limit: 50,
     retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
     shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
   },
 }
 

@@ -124,6 +124,19 @@ pub enum SheddingPolicy {
     Backpressure,
 }
 
+/// Replication role for database nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplicationRole {
+    /// Standalone node — no replication (default).
+    #[default]
+    Standalone,
+    /// Primary node — accepts writes and forwards to replicas.
+    Leader,
+    /// Replica node — receives replicated writes with a delay.
+    Replica,
+}
+
 /// Immutable configuration for a node in the architecture graph.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeConfig {
@@ -136,6 +149,12 @@ pub struct NodeConfig {
     pub timeout_ms: u64,
     pub queue_limit: Option<u32>,
     pub cache_hit_rate: Option<f64>,
+    /// Replication role for database nodes (leader/replica/standalone).
+    #[serde(default)]
+    pub replication_role: ReplicationRole,
+    /// Replication lag in ms — delay before writes appear on replicas.
+    #[serde(default)]
+    pub replication_lag_ms: u64,
     #[serde(default)]
     pub retry_policy: RetryPolicy,
     #[serde(default)]
@@ -285,6 +304,12 @@ pub struct NodeRuntimeState {
     pub total_dropped: u64,
     /// Total requests shed by load shedding policy.
     pub total_shedded: u64,
+    /// Total cache hits.
+    pub total_cache_hits: u64,
+    /// Total cache misses.
+    pub total_cache_misses: u64,
+    /// Total stale reads served from replica.
+    pub total_stale_reads: u64,
     /// Remaining retry budget.
     pub retry_budget_remaining: Option<u32>,
 }
@@ -302,6 +327,9 @@ impl NodeRuntimeState {
             total_timed_out: 0,
             total_dropped: 0,
             total_shedded: 0,
+            total_cache_hits: 0,
+            total_cache_misses: 0,
+            total_stale_reads: 0,
             retry_budget_remaining: retry_budget,
         }
     }
@@ -374,6 +402,21 @@ pub enum Event {
         request_id: u64,
         node_id: String,
     },
+    /// A cache hit occurred — request served from cache without downstream.
+    CacheHit {
+        request_id: u64,
+        node_id: String,
+    },
+    /// A cache miss — request must proceed to downstream.
+    CacheMiss {
+        request_id: u64,
+        node_id: String,
+    },
+    /// A stale read was served from a replica.
+    StaleRead {
+        request_id: u64,
+        node_id: String,
+    },
     ConnectionFailed {
         from: String,
         to: String,
@@ -414,6 +457,9 @@ pub struct Metrics {
     pub retries: u64,
     pub dropped: u64,
     pub shedded: u64,
+    pub cache_hits: u64,
+    pub cache_misses: u64,
+    pub stale_reads: u64,
     pub current_rps: f64,
     pub avg_latency_ms: f64,
     pub p50_latency_ms: f64,
@@ -536,6 +582,8 @@ mod tests {
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
                 shed_policy: SheddingPolicy::default(),
+                replication_role: ReplicationRole::default(),
+                replication_lag_ms: 0,
             }],
             connections: vec![],
             traffic: TrafficConfig {

@@ -19,6 +19,8 @@ fn make_node(id: &str, kind: ComponentKind, capacity: u32) -> NodeConfig {
         cache_hit_rate: None,
         retry_policy: RetryPolicy::default(),
         shed_policy: SheddingPolicy::default(),
+        replication_role: ReplicationRole::default(),
+        replication_lag_ms: 0,
     }
 }
 
@@ -157,6 +159,8 @@ fn zero_capacity_node_drops_all_requests() {
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
                 shed_policy: SheddingPolicy::default(),
+                replication_role: ReplicationRole::default(),
+                replication_lag_ms: 0,
             },
         ],
         connections: vec![ConnectionConfig {

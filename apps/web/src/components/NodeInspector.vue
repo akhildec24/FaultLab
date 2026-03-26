@@ -8,7 +8,7 @@
 
 import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
-import type { NodeKind, RetryStrategyType, SheddingPolicyType } from '@/graph/types'
+import type { NodeKind, RetryStrategyType, SheddingPolicyType, ReplicationRoleType } from '@/graph/types'
 import { NODE_COLORS, NODE_ICONS } from '@/graph/types'
 
 const graph = useGraphStore()
@@ -108,6 +108,16 @@ const shedPolicyOptions: { value: SheddingPolicyType; label: string }[] = [
 
 function updateShedPolicy(value: string): void {
   update({ shed_policy: value as SheddingPolicyType })
+}
+
+const replicationRoleOptions: { value: ReplicationRoleType; label: string }[] = [
+  { value: 'standalone', label: 'Standalone' },
+  { value: 'leader', label: 'Leader (primary)' },
+  { value: 'replica', label: 'Replica' },
+]
+
+function updateReplicationRole(value: string): void {
+  update({ replication_role: value as ReplicationRoleType })
 }
 </script>
 
@@ -323,6 +333,39 @@ function updateShedPolicy(value: string): void {
           </option>
         </select>
         <span class="inspector__hint">What happens when the queue is full</span>
+      </div>
+
+      <!-- Replication section -->
+      <div class="inspector__section-title">Replication</div>
+
+      <!-- Replication role -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-repl-role">Role</label>
+        <select
+          id="node-repl-role"
+          class="inspector__input inspector__select"
+          :value="node.replication_role"
+          @change="updateReplicationRole(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="opt in replicationRoleOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+        <span class="inspector__hint">Leader accepts writes, replica receives delayed copies</span>
+      </div>
+
+      <!-- Replication lag -->
+      <div class="inspector__field">
+        <label class="inspector__label" for="node-repl-lag">Replication lag (ms)</label>
+        <input
+          id="node-repl-lag"
+          class="inspector__input"
+          type="number"
+          min="0"
+          :value="node.replication_lag_ms"
+          @input="updateNumber('replication_lag_ms', ($event.target as HTMLInputElement).value)"
+        />
+        <span class="inspector__hint">Delay before writes appear on replicas (0 = no lag)</span>
       </div>
     </div>
 

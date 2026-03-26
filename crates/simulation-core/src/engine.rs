@@ -327,6 +327,24 @@ impl Engine {
                 self.finish_processing(request_id, &node_id, success);
 
                 if success {
+                    // Check if this is a replica node — may serve stale reads
+                    let config = self.scenario.nodes.iter().find(|n| n.id == node_id);
+                    if let Some(cfg) = config {
+                        if cfg.replication_role == ReplicationRole::Replica
+                            && cfg.replication_lag_ms > 0
+                            && self.rng.chance(0.3)
+                        {
+                            // 30% chance of stale read on a replica with lag
+                            self.scheduler.schedule(
+                                time,
+                                Event::StaleRead {
+                                    request_id,
+                                    node_id: node_id.clone(),
+                                },
+                            );
+                        }
+                    }
+
                     if self.router.has_downstream(&node_id) {
                         // Forward to downstream nodes
                         let downstream = self.router.downstream(&node_id).to_vec();
@@ -491,6 +509,32 @@ impl Engine {
             Event::ConnectionRestored { from, to } => {
                 self.state.network.reconnect(&from, &to);
             }
+
+            Event::CacheHit {
+                request_id: _,
+                node_id: _,
+            } => {
+                // Cache hit is recorded in start_processing; nothing more to do.
+            }
+
+            Event::CacheMiss {
+                request_id: _,
+                node_id: _,
+            } => {
+                // Cache miss is recorded in start_processing; nothing more to do.
+            }
+
+            Event::StaleRead {
+                request_id,
+                node_id,
+            } => {
+                self.state.metrics.stale_reads += 1;
+                if let Some(node) = self.state.nodes.get_mut(&node_id) {
+                    node.total_stale_reads += 1;
+                }
+                // Stale read still completes the request successfully
+                let _ = request_id;
+            }
         }
     }
 
@@ -518,6 +562,53 @@ impl Engine {
         }
         if let Some(node) = self.state.nodes.get_mut(node_id) {
             node.active_requests += 1;
+        }
+
+        // Cache hit check — if the node has a cache_hit_rate and the RNG
+        // rolls a hit, serve immediately without downstream forwarding.
+        if let Some(hit_rate) = config.cache_hit_rate {
+            if hit_rate > 0.0 && self.rng.chance(hit_rate) {
+                // Cache hit — serve immediately
+                if let Some(node) = self.state.nodes.get_mut(node_id) {
+                    node.total_cache_hits += 1;
+                }
+                self.state.metrics.cache_hits += 1;
+                self.scheduler.schedule(
+                    time,
+                    Event::CacheHit {
+                        request_id,
+                        node_id: node_id.to_string(),
+                    },
+                );
+                // Complete processing with a short cache latency
+                let cache_time = time.add(1);
+                self.scheduler.schedule(
+                    cache_time,
+                    Event::RequestCompleted {
+                        request_id,
+                        node_id: node_id.to_string(),
+                        success: true,
+                    },
+                );
+                // Record hop latency for cache hit
+                if let Some(req) = self.state.requests.get_mut(&request_id) {
+                    req.hop_latencies.push(1);
+                }
+                return;
+            } else {
+                // Cache miss — proceed normally but record it
+                if let Some(node) = self.state.nodes.get_mut(node_id) {
+                    node.total_cache_misses += 1;
+                }
+                self.state.metrics.cache_misses += 1;
+                self.scheduler.schedule(
+                    time,
+                    Event::CacheMiss {
+                        request_id,
+                        node_id: node_id.to_string(),
+                    },
+                );
+            }
         }
 
         // Schedule completion
@@ -711,6 +802,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -724,6 +817,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -757,6 +852,8 @@ mod tests {
                 cache_hit_rate: None,
                 retry_policy: RetryPolicy::default(),
                 shed_policy: SheddingPolicy::default(),
+                replication_role: ReplicationRole::default(),
+                replication_lag_ms: 0,
             }],
             connections: vec![],
             traffic: TrafficConfig {
@@ -784,6 +881,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "checkout-api".into(),
@@ -797,6 +896,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "orders-db".into(),
@@ -810,6 +911,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![
@@ -853,6 +956,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "checkout-api".into(),
@@ -871,6 +976,8 @@ mod tests {
                         budget: None,
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "orders-db".into(),
@@ -884,6 +991,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![
@@ -1297,6 +1406,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1310,6 +1421,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1515,6 +1628,8 @@ mod tests {
                         budget: None,
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1533,6 +1648,8 @@ mod tests {
                         budget: None,
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1583,6 +1700,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1601,6 +1720,8 @@ mod tests {
                         budget: Some(5),
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1673,6 +1794,8 @@ mod tests {
                         budget: None,
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1691,6 +1814,8 @@ mod tests {
                         budget: None,
                     },
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1735,6 +1860,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
                 NodeConfig {
                     id: "svc".into(),
@@ -1748,6 +1875,8 @@ mod tests {
                     cache_hit_rate: None,
                     retry_policy: RetryPolicy::default(),
                     shed_policy,
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
                 },
             ],
             connections: vec![ConnectionConfig {
@@ -1809,6 +1938,221 @@ mod tests {
         assert_eq!(
             m.retries, 0,
             "Backpressure policy should not trigger retries"
+        );
+    }
+
+    fn cache_scenario(hit_rate: f64) -> Scenario {
+        Scenario {
+            name: "cache-test".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
+                },
+                NodeConfig {
+                    id: "cache-svc".into(),
+                    kind: ComponentKind::Cache,
+                    name: "Cache Service".into(),
+                    capacity: 100,
+                    latency_ms: 20,
+                    error_rate: 0.0,
+                    timeout_ms: 1000,
+                    queue_limit: None,
+                    cache_hit_rate: Some(hit_rate),
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
+                },
+                NodeConfig {
+                    id: "backend-db".into(),
+                    kind: ComponentKind::Database,
+                    name: "Backend DB".into(),
+                    capacity: 100,
+                    latency_ms: 50,
+                    error_rate: 0.0,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
+                },
+            ],
+            connections: vec![
+                ConnectionConfig {
+                    from: "client".into(),
+                    to: "cache-svc".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+                ConnectionConfig {
+                    from: "cache-svc".into(),
+                    to: "backend-db".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+            ],
+            traffic: TrafficConfig {
+                start_rps: 50,
+                target_rps: 50,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        }
+    }
+
+    #[test]
+    fn cache_hit_rate_produces_hits_and_misses() {
+        let mut engine = Engine::new(cache_scenario(0.5));
+        engine.start();
+        engine.run(1000);
+        let m = engine.metrics();
+        assert!(m.cache_hits > 0, "50% hit rate should produce cache hits");
+        assert!(
+            m.cache_misses > 0,
+            "50% hit rate should produce cache misses"
+        );
+    }
+
+    #[test]
+    fn cache_hit_completes_without_downstream() {
+        let mut engine = Engine::new(cache_scenario(1.0));
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        assert_eq!(
+            m.cache_misses, 0,
+            "100% hit rate should produce zero misses"
+        );
+        assert!(m.cache_hits > 0, "should have cache hits");
+        assert!(m.successful > 0, "cache hits should complete successfully");
+    }
+
+    #[test]
+    fn cache_zero_hit_rate_always_misses() {
+        let mut engine = Engine::new(cache_scenario(0.0));
+        engine.start();
+        engine.run(500);
+        let m = engine.metrics();
+        assert_eq!(m.cache_hits, 0, "0% hit rate should produce zero hits");
+        assert!(m.cache_misses > 0, "should have cache misses");
+    }
+
+    fn replication_scenario() -> Scenario {
+        Scenario {
+            name: "replication-test".into(),
+            nodes: vec![
+                NodeConfig {
+                    id: "client".into(),
+                    kind: ComponentKind::Client,
+                    name: "Client".into(),
+                    capacity: 1000,
+                    latency_ms: 5,
+                    error_rate: 0.0,
+                    timeout_ms: 5000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::default(),
+                    replication_lag_ms: 0,
+                },
+                NodeConfig {
+                    id: "leader-db".into(),
+                    kind: ComponentKind::Database,
+                    name: "Leader DB".into(),
+                    capacity: 50,
+                    latency_ms: 30,
+                    error_rate: 0.0,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::Leader,
+                    replication_lag_ms: 0,
+                },
+                NodeConfig {
+                    id: "replica-db".into(),
+                    kind: ComponentKind::Database,
+                    name: "Replica DB".into(),
+                    capacity: 50,
+                    latency_ms: 30,
+                    error_rate: 0.0,
+                    timeout_ms: 2000,
+                    queue_limit: None,
+                    cache_hit_rate: None,
+                    retry_policy: RetryPolicy::default(),
+                    shed_policy: SheddingPolicy::default(),
+                    replication_role: ReplicationRole::Replica,
+                    replication_lag_ms: 200,
+                },
+            ],
+            connections: vec![
+                ConnectionConfig {
+                    from: "client".into(),
+                    to: "leader-db".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+                ConnectionConfig {
+                    from: "leader-db".into(),
+                    to: "replica-db".into(),
+                    latency_ms: 10,
+                    packet_loss: 0.0,
+                    bandwidth_rps: 0,
+                },
+            ],
+            traffic: TrafficConfig {
+                start_rps: 20,
+                target_rps: 20,
+                ramp_seconds: 0,
+            },
+            seed: 42,
+        }
+    }
+
+    #[test]
+    fn replica_with_lag_produces_stale_reads() {
+        let mut engine = Engine::new(replication_scenario());
+        engine.start();
+        engine.run(2000);
+        let m = engine.metrics();
+        assert!(
+            m.stale_reads > 0,
+            "replica with lag should produce stale reads"
+        );
+    }
+
+    #[test]
+    fn replica_without_lag_no_stale_reads() {
+        let mut scenario = replication_scenario();
+        if let Some(node) = scenario.nodes.iter_mut().find(|n| n.id == "replica-db") {
+            node.replication_lag_ms = 0;
+        }
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(2000);
+        let m = engine.metrics();
+        assert_eq!(
+            m.stale_reads, 0,
+            "replica with no lag should not produce stale reads"
         );
     }
 }
