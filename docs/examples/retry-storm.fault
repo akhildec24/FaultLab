@@ -1,0 +1,47 @@
+# Retry storm scenario — overloaded API retrying a slow database
+
+scenario "retry-storm" {
+  seed: 42
+
+  nodes {
+    client "client" {
+      name: "Customer"
+      capacity: 1000
+      latency: 5ms
+      timeout: 5000ms
+    }
+
+    service "checkout-api" {
+      name: "Checkout API"
+      capacity: 120
+      latency: 40ms
+      error_rate: 1%
+      timeout: 800ms
+      retry: immediate { max_retries: 3, jitter: 0.0 }
+    }
+
+    database "orders-db" {
+      name: "Orders DB"
+      capacity: 80
+      latency: 25ms
+      error_rate: 0.5%
+      timeout: 2000ms
+    }
+  }
+
+  edges {
+    "client" -> "checkout-api" { latency: 10ms }
+    "checkout-api" -> "orders-db" { latency: 5ms }
+  }
+
+  traffic {
+    start: 20 rps
+    target: 500 rps
+    ramp: 30s
+  }
+
+  failures {
+    at 20s: crash "orders-db"
+    at 35s: recover "orders-db"
+  }
+}

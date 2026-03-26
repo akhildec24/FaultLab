@@ -209,7 +209,22 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
 
 ## Week 4 — Language, collaboration, polish
 
-- [ ] **Day 22** — Design the scenario language.
+- [x] **Day 22** — Design the scenario language. DSL grammar spec
+      in docs/DSL.md covering: scenario declaration with name and
+      seed, nodes section (6 component kinds: client, service, queue,
+      cache, database, external_api), node properties (capacity,
+      latency, error_rate, timeout, queue_limit, cache_hit_rate,
+      replication role/lag, retry policy, shed policy), edges section
+      with latency/packet_loss/bandwidth, traffic section with
+      start/target/ramp, failures section with scheduled crash/recover/
+      add_latency/disconnect/add_packet_loss/reduce_capacity. Duration
+      syntax (ms/s/m), percent syntax (0%-100%), fraction syntax for
+      jitter. Retry policies: immediate, fixed, exponential with
+      max_retries/jitter/budget. Shed policies: drop, reject,
+      backpressure. Replication roles: standalone, leader, replica.
+      EBNF grammar. Two example .fault files (retry-storm,
+      cache-replication). Error reporting spec with line/column
+      numbers and suggestions.
 - [ ] **Day 23** — Build the parser.
 - [ ] **Day 24** — Build the code editor.
 - [ ] **Day 25** — Local-first storage.

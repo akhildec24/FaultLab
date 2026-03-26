@@ -1,0 +1,70 @@
+# Cache & replication scenario — cache layer with leader/replica DBs
+
+scenario "cache-replication" {
+  seed: 42
+
+  nodes {
+    client "client" {
+      name: "Web Client"
+      capacity: 1000
+      latency: 5ms
+      timeout: 5000ms
+    }
+
+    service "api" {
+      name: "API Gateway"
+      capacity: 200
+      latency: 20ms
+      error_rate: 0.5%
+      timeout: 1000ms
+      retry: exponential { base: 50ms, max: 2000ms, max_retries: 3, jitter: 0.1 }
+      shed: reject
+    }
+
+    cache "redis" {
+      name: "Redis Cache"
+      capacity: 500
+      latency: 2ms
+      cache_hit_rate: 80%
+    }
+
+    database "primary-db" {
+      name: "Primary DB"
+      capacity: 100
+      latency: 30ms
+      error_rate: 0.2%
+      timeout: 2000ms
+      replication: leader
+      replication_lag: 0ms
+    }
+
+    database "replica-db" {
+      name: "Replica DB"
+      capacity: 100
+      latency: 30ms
+      error_rate: 0.2%
+      timeout: 2000ms
+      replication: replica
+      replication_lag: 300ms
+    }
+  }
+
+  edges {
+    "client" -> "api" { latency: 10ms }
+    "api" -> "redis" { latency: 3ms }
+    "api" -> "primary-db" { latency: 5ms }
+    "primary-db" -> "replica-db" { latency: 2ms }
+  }
+
+  traffic {
+    start: 10 rps
+    target: 200 rps
+    ramp: 20s
+  }
+
+  failures {
+    at 15s: crash "primary-db"
+    at 25s: recover "primary-db"
+    at 30s: add_latency "redis" 50ms
+  }
+}
