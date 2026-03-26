@@ -20,6 +20,10 @@ export interface Metrics {
   timed_out: number;
   retries: number;
   dropped: number;
+  shedded: number;
+  cache_hits: number;
+  cache_misses: number;
+  stale_reads: number;
   current_rps: number;
   avg_latency_ms: number;
   p50_latency_ms: number;

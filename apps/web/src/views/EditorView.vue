@@ -5,6 +5,7 @@ import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
 import SimulationControls from '@/components/SimulationControls.vue'
 import EventTimeline from '@/components/EventTimeline.vue'
+import Dashboard from '@/components/Dashboard.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
@@ -16,6 +17,7 @@ const animation = useAnimationStore()
 
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
 const showTimeline = ref(false)
+const bottomTab = ref<'timeline' | 'dashboard'>('timeline')
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
@@ -103,13 +105,30 @@ onUnmounted(() => {
         </div>
       </aside>
     </div>
-    <!-- Event timeline panel -->
-    <div class="editor-view__timeline" v-if="showTimeline">
-      <EventTimeline />
+    <!-- Bottom panel: timeline / dashboard -->
+    <div class="editor-view__bottom" v-if="showTimeline">
+      <div class="bottom-tabs">
+        <button
+          :class="['bottom-tabs__btn', { 'is-active': bottomTab === 'timeline' }]"
+          @click="bottomTab = 'timeline'"
+        >
+          Timeline ({{ sim.eventLog.length }})
+        </button>
+        <button
+          :class="['bottom-tabs__btn', { 'is-active': bottomTab === 'dashboard' }]"
+          @click="bottomTab = 'dashboard'"
+        >
+          Dashboard
+        </button>
+      </div>
+      <div class="bottom-content">
+        <EventTimeline v-if="bottomTab === 'timeline'" />
+        <Dashboard v-else />
+      </div>
     </div>
-    <!-- Timeline toggle button -->
-    <button class="timeline-toggle" @click="showTimeline = !showTimeline">
-      {{ showTimeline ? '▼' : '▲' }} Event Timeline ({{ sim.eventLog.length }})
+    <!-- Bottom panel toggle -->
+    <button class="bottom-toggle" @click="showTimeline = !showTimeline">
+      {{ showTimeline ? '▼' : '▲' }} {{ bottomTab === 'timeline' ? 'Timeline' : 'Dashboard' }}
     </button>
   </div>
 </template>
@@ -152,14 +171,47 @@ onUnmounted(() => {
   height: 50%;
 }
 
-.editor-view__timeline {
+.editor-view__bottom {
   flex: 1;
   min-height: 0;
   border-top: 2px solid var(--fl-border);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.timeline-toggle {
+.bottom-tabs {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--fl-slate);
+}
+
+.bottom-tabs__btn {
+  padding: var(--fl-space-1) var(--fl-space-3);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--fl-grey-2);
+  font-size: var(--fl-size-14);
+  cursor: pointer;
+}
+
+.bottom-tabs__btn:hover {
+  color: var(--fl-white);
+}
+
+.bottom-tabs__btn.is-active {
+  color: var(--fl-amber);
+  border-bottom-color: var(--fl-amber);
+}
+
+.bottom-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bottom-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -173,7 +225,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.timeline-toggle:hover {
+.bottom-toggle:hover {
   color: var(--fl-amber);
 }
 
