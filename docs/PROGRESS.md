@@ -225,7 +225,18 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       EBNF grammar. Two example .fault files (retry-storm,
       cache-replication). Error reporting spec with line/column
       numbers and suggestions.
-- [ ] **Day 23** — Build the parser.
+- [x] **Day 23** — Build the parser. Full lexer, parser, AST, and
+      semantic validation for the FaultLab DSL. Lexer tokenizes
+      keywords, strings, integers, floats, durations (ms/s/m),
+      percents, arrows, braces, comments (# and //). Recursive
+      descent parser produces AST with line/column error tracking.
+      AST types: AstScenario, AstNode, AstEdge, AstTraffic,
+      AstFailure, AstRetryPolicy. AST→Scenario conversion via
+      to_scenario(). Semantic validation: duplicate node IDs, unknown
+      edge references, unknown failure references. Public API:
+      parse_dsl(), parse_dsl_with_failures(), parse_dsl_ast().
+      24 parser tests (lexer, parser, validation, round-trip).
+      146 tests total, clippy clean.
 - [ ] **Day 24** — Build the code editor.
 - [ ] **Day 25** — Local-first storage.
 - [ ] **Day 26** — Gleam collaboration server.
