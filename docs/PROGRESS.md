@@ -247,7 +247,18 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       validateDsl() basic TS-side validation (unclosed strings,
       missing scenario, unbalanced braces). Third tab in bottom
       panel (Timeline / Dashboard / Code). 146 tests total.
-- [ ] **Day 25** — Local-first storage.
+- [x] **Day 25** — Local-first storage. IndexedDB wrapper
+      (apps/web/src/storage/db.ts) with two object stores: scenarios
+      (CRUD) and history (snapshots keyed by scenarioId+timestamp).
+      useStorage composable with debounced auto-save (2s), periodic
+      history snapshots (30s), manual snapshots, restore from
+      history, scenario list/load/delete, import/export JSON
+      (download + file upload), online/offline indicator. StoragePanel
+      component with status bar, action buttons (New, Save, Export,
+      Import, Snapshot), collapsible saved scenarios list, collapsible
+      history list with restore. Integrated into EditorView as
+      toggleable sidebar panel via Storage button in toolbar.
+      146 tests total.
 - [ ] **Day 26** — Gleam collaboration server.
 - [ ] **Day 27** — Multiplayer presence.
 - [ ] **Day 28** — Performance and resilience.

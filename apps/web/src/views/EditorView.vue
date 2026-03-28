@@ -7,6 +7,7 @@ import SimulationControls from '@/components/SimulationControls.vue'
 import EventTimeline from '@/components/EventTimeline.vue'
 import Dashboard from '@/components/Dashboard.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
+import StoragePanel from '@/components/StoragePanel.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
@@ -19,6 +20,7 @@ const animation = useAnimationStore()
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
 const showTimeline = ref(false)
 const bottomTab = ref<'timeline' | 'dashboard' | 'code'>('timeline')
+const showStorage = ref(false)
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
@@ -70,40 +72,48 @@ onUnmounted(() => {
           {{ graph.nodeCount }} nodes · {{ graph.edgeCount }} edges
         </span>
       </div>
+      <div class="graph-toolbar__group graph-toolbar__group--right">
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="showStorage = !showStorage">
+          {{ showStorage ? '✕ Close' : '📁 Storage' }}
+        </button>
+      </div>
     </div>
     <!-- Main editor area: canvas + inspector side by side -->
     <div class="editor-view__body" :class="{ 'editor-view__body--collapsed': showTimeline }">
       <div class="editor-view__canvas">
         <GraphEditor ref="graphEditorRef" />
       </div>
-      <aside class="editor-view__inspector">
-        <NodeInspector v-if="graph.selectedNodeId" />
-        <EdgeInspector v-else-if="graph.selectedEdgeId" />
-        <div class="inspector-empty" v-else>
-          <div class="inspector-empty__icon">?</div>
-          <h3 class="inspector-empty__title">No Selection</h3>
-          <p class="inspector-empty__text">
-            Click a node or connection in the canvas to edit its properties.
-          </p>
-          <div class="inspector-empty__hints">
-            <div class="inspector-empty__hint">
-              <span class="inspector-empty__hint-key">Click</span>
-              <span>Select a node</span>
-            </div>
-            <div class="inspector-empty__hint">
-              <span class="inspector-empty__hint-key">Drag</span>
-              <span>Move a node</span>
-            </div>
-            <div class="inspector-empty__hint">
-              <span class="inspector-empty__hint-key">Scroll</span>
-              <span>Zoom in/out</span>
-            </div>
-            <div class="inspector-empty__hint">
-              <span class="inspector-empty__hint-key">○</span>
-              <span>Drag amber handle to connect</span>
+      <aside class="editor-view__inspector" :class="{ 'editor-view__inspector--wide': showStorage }">
+        <StoragePanel v-if="showStorage" />
+        <template v-else>
+          <NodeInspector v-if="graph.selectedNodeId" />
+          <EdgeInspector v-else-if="graph.selectedEdgeId" />
+          <div class="inspector-empty" v-else>
+            <div class="inspector-empty__icon">?</div>
+            <h3 class="inspector-empty__title">No Selection</h3>
+            <p class="inspector-empty__text">
+              Click a node or connection in the canvas to edit its properties.
+            </p>
+            <div class="inspector-empty__hints">
+              <div class="inspector-empty__hint">
+                <span class="inspector-empty__hint-key">Click</span>
+                <span>Select a node</span>
+              </div>
+              <div class="inspector-empty__hint">
+                <span class="inspector-empty__hint-key">Drag</span>
+                <span>Move a node</span>
+              </div>
+              <div class="inspector-empty__hint">
+                <span class="inspector-empty__hint-key">Scroll</span>
+                <span>Zoom in/out</span>
+              </div>
+              <div class="inspector-empty__hint">
+                <span class="inspector-empty__hint-key">○</span>
+                <span>Drag amber handle to connect</span>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </aside>
     </div>
     <!-- Bottom panel: timeline / dashboard -->
@@ -250,6 +260,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--fl-space-1);
+}
+
+.graph-toolbar__group--right {
+  margin-left: auto;
 }
 
 .graph-toolbar__btn {
