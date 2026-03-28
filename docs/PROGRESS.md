@@ -274,7 +274,16 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       document, existing clients get sync requests. 12 Gleam tests
       (room creation, message parsing for all types, error handling,
       JSON encoding). 146 Rust tests total.
-- [ ] **Day 27** — Multiplayer presence.
+- [x] **Day 27** — Multiplayer presence. useCollab composable
+      (apps/web/src/collab/useCollab.ts) — WebSocket client with
+      room join/leave, document sync (broadcast graph state),
+      presence (name, color, last-seen pruning), cursor sync
+      (throttled 50ms), reconnection with exponential backoff
+      (1s→30s max). PresenceBar component showing connection status
+      dot and peer avatars with names. PeerCursors overlay showing
+      remote cursors with colored labels. Integrated into EditorView
+      with Collaborate toggle button, debounced graph change
+      broadcast (500ms), and peer cursor overlay on canvas.
 - [ ] **Day 28** — Performance and resilience.
 - [ ] **Day 29** — Testing, deployment, documentation.
 - [ ] **Day 30** — Portfolio presentation.

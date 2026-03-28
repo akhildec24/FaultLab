@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import GraphEditor from '@/components/GraphEditor.vue'
 import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
@@ -8,19 +8,25 @@ import EventTimeline from '@/components/EventTimeline.vue'
 import Dashboard from '@/components/Dashboard.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import StoragePanel from '@/components/StoragePanel.vue'
+import PresenceBar from '@/components/PresenceBar.vue'
+import PeerCursors from '@/components/PeerCursors.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
+import { useCollab } from '@/collab/useCollab'
 import type { NodeKind } from '@/graph/types'
 
 const graph = useGraphStore()
 const sim = useSimulationStore()
 const animation = useAnimationStore()
 
+const collab = useCollab(graph.nodes, graph.edges)
+
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
 const showTimeline = ref(false)
 const bottomTab = ref<'timeline' | 'dashboard' | 'code'>('timeline')
 const showStorage = ref(false)
+const showCollab = ref(false)
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
@@ -31,10 +37,34 @@ onMounted(() => {
   sim.onEvents((events) => animation.processEvents(events))
 })
 
+// Broadcast graph changes to peers (debounced)
+let docSyncTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => [graph.nodes, graph.edges],
+  () => {
+    if (collab.status.value !== 'connected') return
+    if (docSyncTimer) clearTimeout(docSyncTimer)
+    docSyncTimer = setTimeout(() => collab.sendDocUpdate(), 500)
+  },
+  { deep: true },
+)
+
+function toggleCollab() {
+  if (collab.status.value === 'connected') {
+    collab.disconnect()
+    showCollab.value = false
+  } else {
+    collab.connect()
+    collab.joinRoom('default')
+    showCollab.value = true
+  }
+}
+
 onUnmounted(() => {
   sim.onEvents(null)
   animation.stopLoop()
   animation.clear()
+  collab.disconnect()
 })
 </script>
 
@@ -48,6 +78,11 @@ onUnmounted(() => {
       </p>
     </div>
     <SimulationControls />
+    <PresenceBar
+      v-if="showCollab"
+      :status="collab.status.value"
+      :peers="collab.peers.value"
+    />
     <!-- Full-width graph toolbar -->
     <div class="graph-toolbar">
       <div class="graph-toolbar__group">
@@ -73,6 +108,9 @@ onUnmounted(() => {
         </span>
       </div>
       <div class="graph-toolbar__group graph-toolbar__group--right">
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="toggleCollab">
+          {{ collab.status.value === 'connected' ? '✕ Leave' : '🔗 Collaborate' }}
+        </button>
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="showStorage = !showStorage">
           {{ showStorage ? '✕ Close' : '📁 Storage' }}
         </button>
@@ -82,6 +120,10 @@ onUnmounted(() => {
     <div class="editor-view__body" :class="{ 'editor-view__body--collapsed': showTimeline }">
       <div class="editor-view__canvas">
         <GraphEditor ref="graphEditorRef" />
+        <PeerCursors
+          v-if="showCollab && collab.peers.value.size > 0"
+          :peers="collab.peers.value"
+        />
       </div>
       <aside class="editor-view__inspector" :class="{ 'editor-view__inspector--wide': showStorage }">
         <StoragePanel v-if="showStorage" />
