@@ -307,4 +307,11 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       covers Rust (fmt, clippy, test), Gleam (build, test), Web
       (vue-tsc, build). 146 Rust tests, 12 Gleam tests, web type
       checks clean.
-- [ ] **Day 30** — Portfolio presentation.
+- [x] **Day 30** — Portfolio presentation. Architecture page
+      (/architecture) with 6-layer breakdown (frontend, worker,
+      engine, storage, collaboration, deployment), stats grid
+      (146 Rust tests, 12 Gleam tests, 30 build days), and
+      detailed feature lists per layer. Landing page enhanced with
+      showcase scenario cards (retry storm, queue overflow,
+      replication delay) with lessons, architecture link in hero.
+      Router updated with /architecture route.

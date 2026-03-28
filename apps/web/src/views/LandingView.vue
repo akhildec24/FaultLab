@@ -20,6 +20,27 @@ const failures = [
   'Create a network partition',
 ]
 
+const scenarios = [
+  {
+    name: 'Retry Storm',
+    desc: 'Traffic ramps up, a downstream service times out, retries amplify load and cascade through the system.',
+    lesson: 'Exponential backoff + circuit breakers',
+    color: '#ef4444',
+  },
+  {
+    name: 'Queue Overflow',
+    desc: 'A service with a bounded queue receives burst traffic. Watch requests pile up, get shed, and time out.',
+    lesson: 'Load shedding + queue limits',
+    color: '#f59e0b',
+  },
+  {
+    name: 'Replication Delay',
+    desc: 'A leader database replicates to a read replica with configurable lag. Stale reads cause inconsistency.',
+    lesson: 'Read-your-writes + quorum reads',
+    color: '#3b82f6',
+  },
+]
+
 const metrics = [
   { label: 'Requests per second', value: 'Live throughput' },
   { label: 'Success / failure rate', value: 'Outcome tracking' },
@@ -45,6 +66,9 @@ const metrics = [
         <div class="landing__actions">
           <RouterLink to="/editor" class="fl-button fl-button--primary">
             Start building
+          </RouterLink>
+          <RouterLink to="/architecture" class="fl-button fl-button--secondary">
+            Architecture
           </RouterLink>
           <RouterLink to="/docs" class="fl-button fl-button--secondary">
             Read the docs
@@ -154,6 +178,29 @@ const metrics = [
             </RouterLink>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Showcase scenarios -->
+    <section class="fl-section">
+      <div class="fl-container">
+        <h2 class="landing__heading">Three scenarios to learn from</h2>
+        <p class="landing__subheading">
+          Each scenario teaches a specific distributed systems lesson.
+        </p>
+        <div class="fl-grid fl-grid--3">
+          <div v-for="s in scenarios" :key="s.name" class="landing__scenario">
+            <div class="landing__scenario-bar" :style="{ background: s.color }" />
+            <h3>{{ s.name }}</h3>
+            <p>{{ s.desc }}</p>
+            <p class="landing__scenario-lesson">
+              <strong>Lesson:</strong> {{ s.lesson }}
+            </p>
+          </div>
+        </div>
+        <RouterLink to="/editor" class="fl-button fl-button--primary landing__scenario-cta">
+          Open the editor
+        </RouterLink>
       </div>
     </section>
 
@@ -324,6 +371,38 @@ const metrics = [
 .landing__metric-value {
   font-size: var(--fl-size-16);
   color: var(--fl-grey-4);
+}
+
+.landing__scenario {
+  background: var(--fl-white);
+  border: 1px solid var(--fl-border);
+  padding: var(--fl-space-4);
+}
+
+.landing__scenario-bar {
+  height: 4px;
+  width: 100%;
+  margin-bottom: var(--fl-space-3);
+}
+
+.landing__scenario h3 {
+  font-size: var(--fl-size-24);
+  margin-bottom: var(--fl-space-2);
+}
+
+.landing__scenario p {
+  font-size: var(--fl-size-16);
+  color: var(--fl-grey-4);
+  margin-bottom: var(--fl-space-2);
+}
+
+.landing__scenario-lesson {
+  font-size: var(--fl-size-14);
+  color: var(--fl-grey-3);
+}
+
+.landing__scenario-cta {
+  margin-top: var(--fl-space-5);
 }
 
 .landing__demo {

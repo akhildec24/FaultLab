@@ -17,6 +17,11 @@ const routes: RouteRecordRaw[] = [
     name: 'docs',
     component: () => import('@/views/DocsView.vue'),
   },
+  {
+    path: '/architecture',
+    name: 'architecture',
+    component: () => import('@/views/ArchitectureView.vue'),
+  },
 ]
 
 const router = createRouter({
