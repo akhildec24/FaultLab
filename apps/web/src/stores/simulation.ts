@@ -11,7 +11,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import { SimulationWorkerClient } from '@faultlab/simulation-client'
 import type { SimulationEvent, Metrics } from '@faultlab/simulation-client'
-import SimulationWorker from '../../packages/simulation-client/src/worker?worker'
+import SimulationWorker from '@/simulation-worker?worker'
 
 export const useSimulationStore = defineStore('simulation', () => {
   // --- State ---
