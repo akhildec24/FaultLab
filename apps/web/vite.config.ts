@@ -9,6 +9,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
       '@faultlab/simulation-client': resolve(__dirname, '../../packages/simulation-client/src/index.ts'),
       '@faultlab/simulation-client/worker': resolve(__dirname, '../../packages/simulation-client/src/worker.ts'),
+      '@faultlab/wasm': resolve(__dirname, 'src/wasm/simulation_wasm.js'),
     },
   },
   server: {

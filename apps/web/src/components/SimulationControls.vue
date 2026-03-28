@@ -36,7 +36,9 @@ async function startSimulation() {
   showErrors.value = false
   const json = graphToScenarioJson(graph.nodes, graph.edges)
   await sim.loadScenario(json)
+  if (sim.error || !sim.workerHealthy) return
   await sim.start()
+  if (sim.error) return
   // Run a batch of steps to get things going
   await sim.run(500)
 }

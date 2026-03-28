@@ -19,7 +19,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@faultlab/simulation-client": ["../../packages/simulation-client/src/index.ts"],
-      "@faultlab/simulation-client/*": ["../../packages/simulation-client/src/*"]
+      "@faultlab/simulation-client/*": ["../../packages/simulation-client/src/*"],
+      "@faultlab/wasm": ["src/wasm/simulation_wasm.js"]
     }
   },
   "include": ["src", "vite.config.ts", "../../packages/simulation-client/src"],

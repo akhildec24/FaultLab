@@ -26,6 +26,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const workerHealthy = ref(true)
   let lastLoadedScenario: string | null = null
   let recoveryTimer: ReturnType<typeof setTimeout> | null = null
+  let recoveryAttempts = 0
   const RECOVERY_BASE_DELAY = 1000
   const RECOVERY_MAX_DELAY = 10000
 
@@ -58,8 +59,8 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   function scheduleWorkerRecovery(): void {
     if (recoveryTimer) clearTimeout(recoveryTimer)
-    const attempts = 0
-    const delay = Math.min(RECOVERY_BASE_DELAY * Math.pow(2, attempts), RECOVERY_MAX_DELAY)
+    const delay = Math.min(RECOVERY_BASE_DELAY * Math.pow(2, recoveryAttempts), RECOVERY_MAX_DELAY)
+    recoveryAttempts++
     recoveryTimer = setTimeout(() => recoverWorker(), delay)
   }
 
@@ -76,6 +77,7 @@ export const useSimulationStore = defineStore('simulation', () => {
         await c.loadScenario(lastLoadedScenario)
         loaded.value = true
         workerHealthy.value = true
+        recoveryAttempts = 0
         await refreshStatus()
       } catch {
         // Retry with backoff
@@ -83,6 +85,7 @@ export const useSimulationStore = defineStore('simulation', () => {
       }
     } else {
       workerHealthy.value = true
+      recoveryAttempts = 0
     }
   }
 
