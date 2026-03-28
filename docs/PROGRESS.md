@@ -284,6 +284,17 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       remote cursors with colored labels. Integrated into EditorView
       with Collaborate toggle button, debounced graph change
       broadcast (500ms), and peer cursor overlay on canvas.
-- [ ] **Day 28** — Performance and resilience.
+- [x] **Day 28** — Performance and resilience. Large scenario
+      generator (generateLargeScenario) producing layered 120-node
+      topologies (clients → services → databases) with correct
+      GraphNode/GraphEdge types. Viewport culling in GraphEditor:
+      only renders nodes/edges within the visible viewport when
+      node count exceeds 50, with 100px padding. Worker recovery:
+      SimulationWorkerClient.onWorkerError callback, simulation
+      store tracks lastLoadedScenario and workerHealthy, automatic
+      worker restart with exponential backoff (1s→10s max),
+      scenario reload on recovery. Toolbar "120 nodes" button and
+      worker recovery warning indicator. 146 Rust tests, 12 Gleam
+      tests.
 - [ ] **Day 29** — Testing, deployment, documentation.
 - [ ] **Day 30** — Portfolio presentation.

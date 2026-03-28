@@ -6,7 +6,7 @@
  */
 
 import type { GraphNode, GraphEdge } from './types'
-import { generateNodeId, generateEdgeId } from './types'
+import { generateNodeId, generateEdgeId, DEFAULT_NODE_CONFIG, DEFAULT_EDGE_CONFIG } from './types'
 
 export interface PresetScenario {
   id: string
@@ -427,6 +427,97 @@ export const PRESETS: PresetScenario[] = [
   QUEUE_OVERFLOW,
   CACHE_REPLICATION,
 ]
+
+/**
+ * Generate a large scenario with a configurable number of nodes.
+ * Produces a layered topology: clients → services → databases.
+ */
+export function generateLargeScenario(nodeCount: number): {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+} {
+  const clientCount = Math.floor(nodeCount * 0.4)
+  const serviceCount = Math.floor(nodeCount * 0.4)
+  const dbCount = nodeCount - clientCount - serviceCount
+
+  const nodes: GraphNode[] = []
+  const edges: GraphEdge[] = []
+
+  // Layout in columns
+  const colSpacing = 220
+  const rowSpacing = 80
+
+  // Clients
+  for (let i = 0; i < clientCount; i++) {
+    nodes.push({
+      ...DEFAULT_NODE_CONFIG.client,
+      id: generateNodeId(),
+      label: `Client-${i + 1}`,
+      x: 40,
+      y: 40 + i * rowSpacing,
+    })
+  }
+
+  // Services
+  for (let i = 0; i < serviceCount; i++) {
+    nodes.push({
+      ...DEFAULT_NODE_CONFIG.service,
+      id: generateNodeId(),
+      label: `Service-${i + 1}`,
+      x: 40 + colSpacing,
+      y: 40 + i * rowSpacing,
+    })
+  }
+
+  // Databases
+  for (let i = 0; i < dbCount; i++) {
+    nodes.push({
+      ...DEFAULT_NODE_CONFIG.database,
+      id: generateNodeId(),
+      label: `DB-${i + 1}`,
+      x: 40 + colSpacing * 2,
+      y: 40 + i * rowSpacing,
+    })
+  }
+
+  // Edges: each client connects to 1-2 services, each service to 1-2 DBs
+  for (let i = 0; i < clientCount; i++) {
+    const targetService = i % serviceCount
+    edges.push({
+      ...DEFAULT_EDGE_CONFIG,
+      id: generateEdgeId(),
+      from: nodes[i].id,
+      to: nodes[clientCount + targetService].id,
+      latency_ms: 5,
+      packet_loss: 0.01,
+    })
+    if (serviceCount > 1 && i % 2 === 0) {
+      const altService = (targetService + 1) % serviceCount
+      edges.push({
+        ...DEFAULT_EDGE_CONFIG,
+        id: generateEdgeId(),
+        from: nodes[i].id,
+        to: nodes[clientCount + altService].id,
+        latency_ms: 10,
+        packet_loss: 0.02,
+      })
+    }
+  }
+
+  for (let i = 0; i < serviceCount; i++) {
+    const targetDb = i % dbCount
+    edges.push({
+      ...DEFAULT_EDGE_CONFIG,
+      id: generateEdgeId(),
+      from: nodes[clientCount + i].id,
+      to: nodes[clientCount + serviceCount + targetDb].id,
+      latency_ms: 8,
+      packet_loss: 0.005,
+    })
+  }
+
+  return { nodes, edges }
+}
 
 /** Convert a preset into graph nodes and edges with generated IDs. */
 export function instantiatePreset(preset: PresetScenario): {

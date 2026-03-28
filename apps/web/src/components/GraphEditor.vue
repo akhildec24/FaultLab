@@ -32,6 +32,47 @@ const animation = useAnimationStore()
 // --- SVG ref ---
 const svgRef = ref<SVGSVGElement | null>(null)
 
+// --- Viewport culling for large scenarios ---
+const CULL_THRESHOLD = 50 // Only cull when more than this many nodes
+const CULL_PADDING = 100 // Pixels of padding around viewport
+
+const viewportBounds = computed(() => {
+  const svg = svgRef.value
+  if (!svg) return null
+  const rect = svg.getBoundingClientRect()
+  const zoom = graph.view.zoom
+  const panX = graph.view.panX
+  const panY = graph.view.panY
+  // Convert screen viewport to graph coordinates
+  const minX = (-panX - CULL_PADDING) / zoom
+  const maxX = (rect.width - panX + CULL_PADDING) / zoom
+  const minY = (-panY - CULL_PADDING) / zoom
+  const maxY = (rect.height - panY + CULL_PADDING) / zoom
+  return { minX, maxX, minY, maxY }
+})
+
+const shouldCull = computed(() => graph.nodes.length > CULL_THRESHOLD)
+
+const visibleNodes = computed(() => {
+  if (!shouldCull.value || !viewportBounds.value) return graph.nodes
+  const { minX, maxX, minY, maxY } = viewportBounds.value
+  return graph.nodes.filter((n) =>
+    n.x + NODE_WIDTH >= minX && n.x <= maxX &&
+    n.y + NODE_HEIGHT >= minY && n.y <= maxY,
+  )
+})
+
+const visibleNodeIds = computed(() => {
+  if (!shouldCull.value) return new Set(graph.nodes.map((n) => n.id))
+  return new Set(visibleNodes.value.map((n) => n.id))
+})
+
+const visibleEdges = computed(() => {
+  if (!shouldCull.value) return graph.edges
+  const ids = visibleNodeIds.value
+  return graph.edges.filter((e) => ids.has(e.from) && ids.has(e.to))
+})
+
 // Convert screen coordinates to graph coordinates
 function screenToGraph(clientX: number, clientY: number): { x: number; y: number } {
   const svg = svgRef.value
@@ -286,7 +327,7 @@ defineExpose({ addNode })
         <!-- Edges -->
         <g class="edges">
           <path
-            v-for="edge in graph.edges"
+            v-for="edge in visibleEdges"
             :key="edge.id"
             :d="edgePath(edge.from, edge.to)"
             :class="['edge', { 'edge--selected': edge.id === graph.selectedEdgeId }]"
@@ -305,7 +346,7 @@ defineExpose({ addNode })
 
         <!-- Nodes -->
         <g
-          v-for="node in graph.nodes"
+          v-for="node in visibleNodes"
           :key="node.id"
           :class="['node', { 'node--selected': node.id === graph.selectedNodeId }]"
           :transform="`translate(${node.x}, ${node.y})`"

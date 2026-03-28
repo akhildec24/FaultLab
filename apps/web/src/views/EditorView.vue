@@ -14,6 +14,7 @@ import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
 import { useCollab } from '@/collab/useCollab'
+import { generateLargeScenario } from '@/graph/presets'
 import type { NodeKind } from '@/graph/types'
 
 const graph = useGraphStore()
@@ -30,6 +31,14 @@ const showCollab = ref(false)
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
+}
+
+function loadLargeScenario(): void {
+  const { nodes, edges } = generateLargeScenario(120)
+  graph.nodes = nodes
+  graph.edges = edges
+  graph.selectedNodeId = null
+  graph.selectedEdgeId = null
 }
 
 // Wire simulation events → animation store
@@ -105,6 +114,12 @@ onUnmounted(() => {
       <div class="graph-toolbar__group">
         <span class="graph-toolbar__info">
           {{ graph.nodeCount }} nodes · {{ graph.edgeCount }} edges
+        </span>
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="loadLargeScenario">
+          ⚡ 120 nodes
+        </button>
+        <span v-if="!sim.workerHealthy" class="graph-toolbar__warn">
+          ⚠ Worker recovering…
         </span>
       </div>
       <div class="graph-toolbar__group graph-toolbar__group--right">
@@ -333,6 +348,12 @@ onUnmounted(() => {
   color: var(--fl-grey-2);
   font-size: var(--fl-size-14);
   margin-left: auto;
+}
+
+.graph-toolbar__warn {
+  color: #f59e0b;
+  font-size: var(--fl-size-14);
+  font-weight: 600;
 }
 
 .editor-view__canvas {

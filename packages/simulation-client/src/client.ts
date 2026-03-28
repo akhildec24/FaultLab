@@ -16,6 +16,7 @@ import type {
 } from './protocol'
 
 export type SimulationEventHandler = (event: SimulationEvent) => void
+export type WorkerErrorHandler = (message: string) => void
 
 export class SimulationWorkerClient {
   private worker: Worker
@@ -25,6 +26,7 @@ export class SimulationWorkerClient {
     reject: (error: Error) => void
   }>()
   private eventHandler: SimulationEventHandler | null = null
+  private workerErrorHandler: WorkerErrorHandler | null = null
 
   constructor(workerUrl: URL) {
     this.worker = new Worker(workerUrl, { type: 'module' })
@@ -37,6 +39,9 @@ export class SimulationWorkerClient {
         p.reject(new Error(`Worker error: ${e.message}`))
       }
       this.pending.clear()
+      if (this.workerErrorHandler) {
+        this.workerErrorHandler(e.message)
+      }
     }
   }
 
@@ -46,6 +51,14 @@ export class SimulationWorkerClient {
    */
   onEvent(handler: SimulationEventHandler | null): void {
     this.eventHandler = handler
+  }
+
+  /**
+   * Set a handler for worker errors (crashes, uncaught exceptions).
+   * The store uses this to trigger automatic worker recovery.
+   */
+  onWorkerError(handler: WorkerErrorHandler | null): void {
+    this.workerErrorHandler = handler
   }
 
   private handleMessage(msg: WorkerMessage): void {

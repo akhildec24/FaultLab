@@ -23,6 +23,11 @@ export const useSimulationStore = defineStore('simulation', () => {
   const EVENT_LOG_CAP = 5000
   const error = ref<string | null>(null)
   const loaded = ref(false)
+  const workerHealthy = ref(true)
+  let lastLoadedScenario: string | null = null
+  let recoveryTimer: ReturnType<typeof setTimeout> | null = null
+  const RECOVERY_BASE_DELAY = 1000
+  const RECOVERY_MAX_DELAY = 10000
 
   // --- Worker client (lazy init) ---
   let client: SimulationWorkerClient | null = null
@@ -42,8 +47,43 @@ export const useSimulationStore = defineStore('simulation', () => {
       )
       client = new SimulationWorkerClient(workerUrl)
       client.onEvent(handleEvent)
+      // Monitor worker health
+      client.onWorkerError(() => {
+        workerHealthy.value = false
+        scheduleWorkerRecovery()
+      })
     }
     return client
+  }
+
+  function scheduleWorkerRecovery(): void {
+    if (recoveryTimer) clearTimeout(recoveryTimer)
+    const attempts = 0
+    const delay = Math.min(RECOVERY_BASE_DELAY * Math.pow(2, attempts), RECOVERY_MAX_DELAY)
+    recoveryTimer = setTimeout(() => recoverWorker(), delay)
+  }
+
+  async function recoverWorker(): Promise<void> {
+    // Terminate old client
+    if (client) {
+      try { client.terminate() } catch { /* ignore */ }
+      client = null
+    }
+    // Recreate and reload scenario if we had one
+    if (lastLoadedScenario) {
+      try {
+        const c = ensureClient()
+        await c.loadScenario(lastLoadedScenario)
+        loaded.value = true
+        workerHealthy.value = true
+        await refreshStatus()
+      } catch {
+        // Retry with backoff
+        scheduleWorkerRecovery()
+      }
+    } else {
+      workerHealthy.value = true
+    }
   }
 
   function handleEvent(event: SimulationEvent): void {
@@ -73,8 +113,10 @@ export const useSimulationStore = defineStore('simulation', () => {
     clearError()
     try {
       const c = ensureClient()
+      lastLoadedScenario = json
       await c.loadScenario(json)
       loaded.value = true
+      workerHealthy.value = true
       await refreshStatus()
     } catch (e) {
       error.value = String(e)
@@ -208,6 +250,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLog,
     error,
     loaded,
+    workerHealthy,
     // Computed
     isLoaded,
     hasError,
