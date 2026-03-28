@@ -28,8 +28,8 @@ export class SimulationWorkerClient {
   private eventHandler: SimulationEventHandler | null = null
   private workerErrorHandler: WorkerErrorHandler | null = null
 
-  constructor(workerUrl: URL) {
-    this.worker = new Worker(workerUrl, { type: 'module' })
+  constructor(worker: Worker) {
+    this.worker = worker
     this.worker.onmessage = (e: MessageEvent<WorkerMessage>) => {
       this.handleMessage(e.data)
     }

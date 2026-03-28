@@ -11,6 +11,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import { SimulationWorkerClient } from '@faultlab/simulation-client'
 import type { SimulationEvent, Metrics } from '@faultlab/simulation-client'
+import SimulationWorker from '@faultlab/simulation-client/worker?worker'
 
 export const useSimulationStore = defineStore('simulation', () => {
   // --- State ---
@@ -42,11 +43,8 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   function ensureClient(): SimulationWorkerClient {
     if (!client) {
-      const workerUrl = new URL(
-        '@faultlab/simulation-client/worker',
-        import.meta.url,
-      )
-      client = new SimulationWorkerClient(workerUrl)
+      const worker = new SimulationWorker()
+      client = new SimulationWorkerClient(worker)
       client.onEvent(handleEvent)
       // Monitor worker health
       client.onWorkerError(() => {
