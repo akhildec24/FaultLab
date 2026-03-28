@@ -19,6 +19,8 @@ export const useSimulationStore = defineStore('simulation', () => {
   const pendingEvents = ref(0)
   const metrics = shallowRef<Metrics | null>(null)
   const recentEvents = shallowRef<unknown[]>([])
+  const eventLog = ref<unknown[]>([])
+  const EVENT_LOG_CAP = 5000
   const error = ref<string | null>(null)
   const loaded = ref(false)
 
@@ -48,6 +50,11 @@ export const useSimulationStore = defineStore('simulation', () => {
     switch (event.type) {
       case 'EVENTS':
         recentEvents.value = event.events
+        // Accumulate into event log with cap
+        const combined = eventLog.value.concat(event.events)
+        eventLog.value = combined.length > EVENT_LOG_CAP
+          ? combined.slice(combined.length - EVENT_LOG_CAP)
+          : combined
         if (eventsCallback) eventsCallback(event.events)
         break
       case 'ENGINE_STOPPED':
@@ -106,6 +113,7 @@ export const useSimulationStore = defineStore('simulation', () => {
       running.value = false
       currentTime.value = 0
       recentEvents.value = []
+      eventLog.value = []
       await refreshStatus()
     } catch (e) {
       error.value = String(e)
@@ -182,6 +190,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     pendingEvents.value = 0
     metrics.value = null
     recentEvents.value = []
+    eventLog.value = []
     loaded.value = false
   }
 
@@ -196,6 +205,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     pendingEvents,
     metrics,
     recentEvents,
+    eventLog,
     error,
     loaded,
     // Computed

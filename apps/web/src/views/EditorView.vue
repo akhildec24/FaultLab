@@ -4,6 +4,7 @@ import GraphEditor from '@/components/GraphEditor.vue'
 import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
 import SimulationControls from '@/components/SimulationControls.vue'
+import EventTimeline from '@/components/EventTimeline.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
@@ -14,6 +15,7 @@ const sim = useSimulationStore()
 const animation = useAnimationStore()
 
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
+const showTimeline = ref(false)
 
 function addNode(kind: NodeKind): void {
   graphEditorRef.value?.addNode(kind)
@@ -67,7 +69,7 @@ onUnmounted(() => {
       </div>
     </div>
     <!-- Main editor area: canvas + inspector side by side -->
-    <div class="editor-view__body">
+    <div class="editor-view__body" :class="{ 'editor-view__body--collapsed': showTimeline }">
       <div class="editor-view__canvas">
         <GraphEditor ref="graphEditorRef" />
       </div>
@@ -101,6 +103,14 @@ onUnmounted(() => {
         </div>
       </aside>
     </div>
+    <!-- Event timeline panel -->
+    <div class="editor-view__timeline" v-if="showTimeline">
+      <EventTimeline />
+    </div>
+    <!-- Timeline toggle button -->
+    <button class="timeline-toggle" @click="showTimeline = !showTimeline">
+      {{ showTimeline ? '▼' : '▲' }} Event Timeline ({{ sim.eventLog.length }})
+    </button>
   </div>
 </template>
 
@@ -135,6 +145,36 @@ onUnmounted(() => {
   display: flex;
   min-height: 0;
   overflow: hidden;
+}
+
+.editor-view__body--collapsed {
+  flex: 0 0 auto;
+  height: 50%;
+}
+
+.editor-view__timeline {
+  flex: 1;
+  min-height: 0;
+  border-top: 2px solid var(--fl-border);
+  overflow: hidden;
+}
+
+.timeline-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fl-space-1) var(--fl-space-3);
+  background: var(--fl-slate);
+  border: none;
+  border-top: 1px solid var(--fl-border);
+  color: var(--fl-grey-2);
+  font-size: var(--fl-size-14);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.timeline-toggle:hover {
+  color: var(--fl-amber);
 }
 
 .graph-toolbar {
