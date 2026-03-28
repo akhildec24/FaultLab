@@ -296,5 +296,15 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       scenario reload on recovery. Toolbar "120 nodes" button and
       worker recovery warning indicator. 146 Rust tests, 12 Gleam
       tests.
-- [ ] **Day 29** — Testing, deployment, documentation.
+- [x] **Day 29** — Testing, deployment, documentation. Technical
+      README with features, architecture diagram, project structure,
+      testing commands, CI description, tech stack table. Docker:
+      server Dockerfile updated with gleam build step, correct port
+      4000, HEALTHCHECK on /health endpoint; web Dockerfile updated
+      to multi-stage build (build → preview) with health check;
+      docker-compose updated with correct ports, healthcheck config,
+      depends_on with service_healthy condition. CI workflow already
+      covers Rust (fmt, clippy, test), Gleam (build, test), Web
+      (vue-tsc, build). 146 Rust tests, 12 Gleam tests, web type
+      checks clean.
 - [ ] **Day 30** — Portfolio presentation.
