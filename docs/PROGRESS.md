@@ -259,7 +259,21 @@ Tracking day-by-day progress against the 30-day plan in `docs/PLAN.md`.
       history list with restore. Integrated into EditorView as
       toggleable sidebar panel via Storage button in toolbar.
       146 tests total.
-- [ ] **Day 26** — Gleam collaboration server.
+- [x] **Day 26** — Gleam collaboration server. WebSocket server
+      using mist v6 on port 4000 with /ws (WebSocket upgrade) and
+      /health (health check) endpoints. rooms.gleam module: RoomState
+      with client dict and document state, RoomMessage (Join, Leave,
+      Update, Cursor, Presence), OutMessage (PeerUpdate, PeerCursor,
+      PeerPresence, PeerJoined, PeerLeft, SyncRequest, SyncResponse).
+      Pure handle_room_message function for testability. JSON
+      encoding/decoding via gleam_json v3 with gleam/dynamic/decode.
+      Actor-based room management with named subjects for room lookup.
+      WebSocket handler: client ID generation, inbox subject for
+      outgoing messages, selector for receiving actor messages,
+      on_close cleanup. Document sync: new clients receive current
+      document, existing clients get sync requests. 12 Gleam tests
+      (room creation, message parsing for all types, error handling,
+      JSON encoding). 146 Rust tests total.
 - [ ] **Day 27** — Multiplayer presence.
 - [ ] **Day 28** — Performance and resilience.
 - [ ] **Day 29** — Testing, deployment, documentation.
