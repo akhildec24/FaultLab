@@ -196,6 +196,74 @@ pub struct Scenario {
 }
 
 // ---------------------------------------------------------------------------
+// Deterministic replay
+// ---------------------------------------------------------------------------
+
+/// Current engine version — bumped when the simulation logic changes
+/// in a way that affects determinism (e.g. event ordering, RNG usage).
+pub const ENGINE_VERSION: u32 = 1;
+
+/// Current scenario format version — bumped when the scenario schema
+/// changes (new fields, removed fields, semantic changes).
+pub const SCENARIO_VERSION: u32 = 1;
+
+/// A single recorded action in a simulation command log.
+///
+/// Each entry captures what happened and when (in virtual time ms)
+/// so that a simulation can be replayed exactly.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum CommandLogEntry {
+    Start {
+        time_ms: u64,
+    },
+    Step {
+        time_ms: u64,
+    },
+    Run {
+        time_ms: u64,
+        max_steps: usize,
+    },
+    Pause {
+        time_ms: u64,
+    },
+    Reset {
+        time_ms: u64,
+    },
+    InjectFailure {
+        time_ms: u64,
+        failure: FailureInjection,
+    },
+}
+
+/// A command log that records all actions taken during a simulation run.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CommandLog {
+    pub entries: Vec<CommandLogEntry>,
+}
+
+/// Metadata about a replay recording — versions, seed, recording time.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ReplayMetadata {
+    pub scenario_version: u32,
+    pub engine_version: u32,
+    pub seed: u64,
+    pub total_steps: usize,
+    pub final_time_ms: u64,
+}
+
+/// A complete replay recording — scenario + command log + metadata.
+///
+/// This can be serialised to JSON and shared, then replayed on any
+/// engine with a matching version to reproduce the exact same results.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplayRecording {
+    pub scenario: Scenario,
+    pub command_log: CommandLog,
+    pub metadata: ReplayMetadata,
+}
+
+// ---------------------------------------------------------------------------
 // Runtime types (mutable during a run)
 // ---------------------------------------------------------------------------
 

@@ -28,6 +28,10 @@ pub struct Engine {
     recent_events: Vec<(VirtualTime, Event)>,
     /// Max number of recent events to retain.
     recent_events_cap: usize,
+    /// Command log — records all actions for deterministic replay.
+    command_log: CommandLog,
+    /// Total steps executed since start (for replay metadata).
+    total_steps: usize,
 }
 
 impl Engine {
@@ -45,6 +49,8 @@ impl Engine {
             traffic_scheduled: false,
             recent_events: Vec::new(),
             recent_events_cap: 256,
+            command_log: CommandLog::default(),
+            total_steps: 0,
         }
     }
 
@@ -59,10 +65,16 @@ impl Engine {
             self.traffic_scheduled = true;
         }
         self.running = true;
+        self.command_log.entries.push(CommandLogEntry::Start {
+            time_ms: self.now().millis(),
+        });
     }
 
     pub fn pause(&mut self) {
         self.running = false;
+        self.command_log.entries.push(CommandLogEntry::Pause {
+            time_ms: self.now().millis(),
+        });
     }
 
     pub fn reset(&mut self) {
@@ -72,6 +84,10 @@ impl Engine {
         self.running = false;
         self.traffic_scheduled = false;
         self.recent_events.clear();
+        self.command_log.entries.push(CommandLogEntry::Reset {
+            time_ms: self.now().millis(),
+        });
+        self.total_steps = 0;
     }
 
     pub fn is_running(&self) -> bool {
@@ -94,6 +110,57 @@ impl Engine {
         &self.scenario
     }
 
+    /// Returns the command log recorded so far.
+    pub fn command_log(&self) -> &CommandLog {
+        &self.command_log
+    }
+
+    /// Build a complete replay recording from the current engine state.
+    pub fn recording(&self) -> ReplayRecording {
+        ReplayRecording {
+            scenario: self.scenario.clone(),
+            command_log: self.command_log.clone(),
+            metadata: ReplayMetadata {
+                scenario_version: SCENARIO_VERSION,
+                engine_version: ENGINE_VERSION,
+                seed: self.scenario.seed,
+                total_steps: self.total_steps,
+                final_time_ms: self.now().millis(),
+            },
+        }
+    }
+
+    /// Replay a recording — creates a fresh engine from the recording's
+    /// scenario and replays each command log entry in order.
+    ///
+    /// Returns the final metrics.
+    pub fn replay(recording: &ReplayRecording) -> Metrics {
+        let mut engine = Engine::new(recording.scenario.clone());
+        for entry in &recording.command_log.entries {
+            match entry {
+                CommandLogEntry::Start { .. } => {
+                    engine.start();
+                }
+                CommandLogEntry::Step { .. } => {
+                    engine.step();
+                }
+                CommandLogEntry::Run { max_steps, .. } => {
+                    engine.run(*max_steps);
+                }
+                CommandLogEntry::Pause { .. } => {
+                    engine.pause();
+                }
+                CommandLogEntry::Reset { .. } => {
+                    engine.reset();
+                }
+                CommandLogEntry::InjectFailure { failure, .. } => {
+                    engine.inject_failure(failure);
+                }
+            }
+        }
+        engine.metrics().clone()
+    }
+
     /// Recent events for external consumers (e.g. WASM UI).
     pub fn recent_events(&self) -> &[(VirtualTime, Event)] {
         &self.recent_events
@@ -114,6 +181,7 @@ impl Engine {
         match self.scheduler.next_event() {
             Some((time, event)) => {
                 self.handle_event(time, event);
+                self.total_steps += 1;
                 true
             }
             None => false,
@@ -123,10 +191,15 @@ impl Engine {
     /// Run until all events are processed, `max_steps` is reached,
     /// or the engine is paused. Returns the number of steps executed.
     pub fn run(&mut self, max_steps: usize) -> usize {
+        let start_time = self.now().millis();
         let mut steps = 0;
         while steps < max_steps && self.running && self.step() {
             steps += 1;
         }
+        self.command_log.entries.push(CommandLogEntry::Run {
+            time_ms: start_time,
+            max_steps,
+        });
         steps
     }
 
@@ -135,6 +208,12 @@ impl Engine {
     /// corresponding event in the event history.
     pub fn inject_failure(&mut self, failure: &FailureInjection) {
         let time = self.now();
+        self.command_log
+            .entries
+            .push(CommandLogEntry::InjectFailure {
+                time_ms: time.millis(),
+                failure: failure.clone(),
+            });
         match failure {
             FailureInjection::Crash { node_id } => {
                 if let Some(node) = self.state.nodes.get_mut(node_id) {
@@ -2153,6 +2232,143 @@ mod tests {
         assert_eq!(
             m.stale_reads, 0,
             "replica with no lag should not produce stale reads"
+        );
+    }
+
+    #[test]
+    fn replay_produces_identical_metrics() {
+        let scenario = three_node_scenario();
+        let mut engine = Engine::new(scenario.clone());
+        engine.start();
+        engine.run(10000);
+        let original_metrics = engine.metrics().clone();
+        let recording = engine.recording();
+
+        let replayed_metrics = Engine::replay(&recording);
+        assert_eq!(
+            replayed_metrics.total_requests, original_metrics.total_requests,
+            "replay should produce same total_requests"
+        );
+        assert_eq!(
+            replayed_metrics.successful, original_metrics.successful,
+            "replay should produce same successful count"
+        );
+        assert_eq!(
+            replayed_metrics.failed, original_metrics.failed,
+            "replay should produce same failed count"
+        );
+        assert_eq!(
+            replayed_metrics.timed_out, original_metrics.timed_out,
+            "replay should produce same timed_out count"
+        );
+    }
+
+    #[test]
+    fn replay_with_failure_injection() {
+        let scenario = retry_storm_scenario();
+        let mut engine = Engine::new(scenario.clone());
+        engine.start();
+        engine.run(500);
+        engine.inject_failure(&FailureInjection::Crash {
+            node_id: "orders-db".into(),
+        });
+        engine.run(5000);
+        let original_metrics = engine.metrics().clone();
+        let recording = engine.recording();
+
+        let replayed_metrics = Engine::replay(&recording);
+        assert_eq!(
+            replayed_metrics.total_requests, original_metrics.total_requests,
+            "replay with failure should produce same total_requests"
+        );
+        assert_eq!(
+            replayed_metrics.successful, original_metrics.successful,
+            "replay with failure should produce same successful count"
+        );
+        assert_eq!(
+            replayed_metrics.failed, original_metrics.failed,
+            "replay with failure should produce same failed count"
+        );
+    }
+
+    #[test]
+    fn recording_metadata_is_correct() {
+        let scenario = three_node_scenario();
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(1000);
+        let recording = engine.recording();
+
+        assert_eq!(
+            recording.metadata.scenario_version, SCENARIO_VERSION,
+            "scenario version should match"
+        );
+        assert_eq!(
+            recording.metadata.engine_version, ENGINE_VERSION,
+            "engine version should match"
+        );
+        assert_eq!(
+            recording.metadata.seed, 42,
+            "seed should match scenario seed"
+        );
+        assert!(
+            recording.metadata.total_steps > 0,
+            "should have recorded steps"
+        );
+        assert!(
+            recording.metadata.final_time_ms > 0,
+            "should have non-zero final time"
+        );
+    }
+
+    #[test]
+    fn command_log_records_actions() {
+        let scenario = three_node_scenario();
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(500);
+        engine.pause();
+        let log = engine.command_log();
+
+        // Should have at least: Start, Run, Pause
+        assert!(
+            log.entries.len() >= 3,
+            "command log should record start, run, and pause"
+        );
+
+        // First entry should be Start
+        assert!(
+            matches!(log.entries.first(), Some(CommandLogEntry::Start { .. })),
+            "first entry should be Start"
+        );
+
+        // Last entry should be Pause
+        assert!(
+            matches!(log.entries.last(), Some(CommandLogEntry::Pause { .. })),
+            "last entry should be Pause"
+        );
+    }
+
+    #[test]
+    fn replay_recording_is_serializable() {
+        let scenario = three_node_scenario();
+        let mut engine = Engine::new(scenario);
+        engine.start();
+        engine.run(500);
+        let recording = engine.recording();
+
+        let json = serde_json::to_string(&recording).expect("should serialize");
+        let deserialized: ReplayRecording =
+            serde_json::from_str(&json).expect("should deserialize");
+
+        assert_eq!(
+            deserialized.metadata.seed, recording.metadata.seed,
+            "deserialized recording should have same seed"
+        );
+        assert_eq!(
+            deserialized.command_log.entries.len(),
+            recording.command_log.entries.len(),
+            "deserialized recording should have same command log length"
         );
     }
 }
