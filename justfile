@@ -28,11 +28,11 @@ build-wasm:
 
 # Build WASM package with wasm-pack (generates JS glue + TypeScript types)
 wasm-pack:
-    wasm-pack build crates/simulation-wasm --target web --out-dir ../../../apps/web/src/wasm
+    wasm-pack build crates/simulation-wasm --target web --out-dir ../../apps/web/src/wasm
 
 # Build WASM for Node.js testing
 wasm-pack-node:
-    wasm-pack build crates/simulation-wasm --target nodejs --out-dir ../../../apps/web/src/wasm
+    wasm-pack build crates/simulation-wasm --target nodejs --out-dir ../../apps/web/src/wasm
 
 # Run Rust tests
 test-rust:

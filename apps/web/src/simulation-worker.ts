@@ -1,40 +1,19 @@
 /**
  * Simulation Web Worker (local entry for Vite ?worker resolution).
  *
- * Inlined from packages/simulation-client/src/worker.ts because
- * Vite ?worker imports can't resolve package aliases.
+ * Loads the WASM simulation engine and processes typed messages.
  */
 
 import type { WorkerRequest, WorkerResponse, WorkerMessage, WorkerPayload } from '@faultlab/simulation-client/protocol'
+import initWasm, { Simulation } from './wasm/simulation_wasm.js'
 
-type WasmModule = {
-  Simulation: new () => {
-    loadScenario(json: string): void
-    start(): void
-    pause(): void
-    reset(): void
-    step(): boolean
-    run(maxSteps: number): number
-    isRunning(): boolean
-    currentTime(): number
-    getMetrics(): string
-    getState(): string
-    getRecentEvents(): string
-    pendingEvents(): number
-    injectFailure(json: string): void
-  }
-}
-
-let sim: InstanceType<WasmModule['Simulation']> | null = null
+let sim: Simulation | null = null
 let initialized = false
 
 async function ensureLoaded(): Promise<void> {
   if (initialized) return
-  // The WASM stub at src/wasm/simulation_wasm.js is replaced by
-  // `just wasm-pack`. Use relative path for worker context.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mod = (await import('./wasm/simulation_wasm.js')) as any as WasmModule
-  sim = new mod.Simulation()
+  await initWasm()
+  sim = new Simulation()
   initialized = true
 }
 
@@ -53,7 +32,7 @@ async function handleRequest(req: WorkerRequest): Promise<WorkerResponse> {
   try {
     switch (req.type) {
       case 'LOAD_SCENARIO':
-        sim.loadScenario(req.json)
+        sim.load_scenario(req.json)
         return ok(req.id, { kind: 'void' })
 
       case 'START':
@@ -81,24 +60,24 @@ async function handleRequest(req: WorkerRequest): Promise<WorkerResponse> {
       }
 
       case 'GET_METRICS':
-        return ok(req.id, { kind: 'metrics', json: sim.getMetrics() })
+        return ok(req.id, { kind: 'metrics', json: sim.get_metrics() })
 
       case 'GET_STATE':
-        return ok(req.id, { kind: 'state', json: sim.getState() })
+        return ok(req.id, { kind: 'state', json: sim.get_state() })
 
       case 'GET_RECENT_EVENTS':
-        return ok(req.id, { kind: 'events', json: sim.getRecentEvents() })
+        return ok(req.id, { kind: 'events', json: sim.get_recent_events() })
 
       case 'GET_STATUS':
         return ok(req.id, {
           kind: 'status',
-          running: sim.isRunning(),
-          currentTime: sim.currentTime(),
-          pendingEvents: sim.pendingEvents(),
+          running: sim.is_running(),
+          currentTime: Number(sim.current_time()),
+          pendingEvents: sim.pending_events(),
         })
 
       case 'INJECT_FAILURE':
-        sim.injectFailure(req.json)
+        sim.inject_failure(req.json)
         drainEvents()
         return ok(req.id, { kind: 'void' })
 
@@ -114,7 +93,7 @@ async function handleRequest(req: WorkerRequest): Promise<WorkerResponse> {
 
 function drainEvents(): void {
   if (!sim) return
-  const json = sim.getRecentEvents()
+  const json = sim.get_recent_events()
   try {
     const events = JSON.parse(json) as unknown[]
     if (events.length > 0) {
