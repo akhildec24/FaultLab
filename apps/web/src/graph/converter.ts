@@ -9,6 +9,11 @@ import type { GraphNode, GraphEdge } from './types'
 
 // --- Scenario JSON types (mirror Rust structs) ---
 
+export type RetryStrategyJson =
+  | 'immediate'
+  | { fixed: { delay_ms: number } }
+  | { exponential: { base_ms: number; max_delay_ms: number } }
+
 export interface ScenarioNode {
   id: string
   kind: string
@@ -19,7 +24,7 @@ export interface ScenarioNode {
   timeout_ms: number
   queue_limit: number | null
   retry_policy: {
-    strategy: string
+    strategy: RetryStrategyJson
     max_retries: number
     jitter: number
     budget?: number | null
@@ -156,6 +161,19 @@ const DEFAULT_TRAFFIC: ScenarioTraffic = {
 
 const DEFAULT_SEED = 42
 
+function retryStrategyToJson(strategy: string): RetryStrategyJson {
+  switch (strategy) {
+    case 'immediate':
+      return 'immediate'
+    case 'fixed':
+      return { fixed: { delay_ms: 100 } }
+    case 'exponential':
+      return { exponential: { base_ms: 50, max_delay_ms: 5000 } }
+    default:
+      return 'immediate'
+  }
+}
+
 export function graphToScenario(
   nodes: GraphNode[],
   edges: GraphEdge[],
@@ -175,7 +193,7 @@ export function graphToScenario(
     timeout_ms: n.timeout_ms,
     queue_limit: n.queue_limit,
     retry_policy: {
-      strategy: n.retry_policy.strategy,
+      strategy: retryStrategyToJson(n.retry_policy.strategy),
       max_retries: n.retry_policy.max_retries,
       jitter: n.retry_policy.jitter,
       budget: n.retry_policy.budget,
