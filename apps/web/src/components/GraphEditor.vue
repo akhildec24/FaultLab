@@ -428,7 +428,11 @@ defineExpose({ addNode })
 
     <!-- Empty state -->
     <div v-if="graph.nodeCount === 0" class="graph-empty">
-      <p>Add a node from the toolbar to get started</p>
+      <div class="graph-empty__icon">⚡</div>
+      <h3 class="graph-empty__title">Start Building</h3>
+      <p class="graph-empty__text">
+        Add nodes from the toolbar above, or load a preset scenario from the dropdown.
+      </p>
     </div>
 
     <!-- Connecting hint -->
@@ -521,10 +525,26 @@ defineExpose({ addNode })
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: var(--fl-grey-3);
-  font-size: var(--fl-size-19);
   pointer-events: none;
   text-align: center;
+}
+
+.graph-empty__icon {
+  font-size: 48px;
+  margin-bottom: var(--fl-space-2);
+}
+
+.graph-empty__title {
+  font-size: var(--fl-size-24);
+  font-weight: 700;
+  color: var(--fl-slate);
+  margin-bottom: var(--fl-space-1);
+}
+
+.graph-empty__text {
+  font-size: var(--fl-size-16);
+  color: var(--fl-grey-3);
+  max-width: 320px;
 }
 
 /* Connecting hint */

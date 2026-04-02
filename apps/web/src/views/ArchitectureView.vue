@@ -82,7 +82,7 @@ const stats = [
   { label: 'Rust tests', value: '146' },
   { label: 'Gleam tests', value: '12' },
   { label: 'Node types', value: '3' },
-  { label: 'Preset scenarios', value: '6' },
+  { label: 'Preset scenarios', value: '9' },
   { label: 'Max nodes (tested)', value: '120+' },
   { label: 'Build days', value: '30' },
 ]
@@ -178,6 +178,13 @@ const stats = [
   border: 1px solid var(--fl-border);
   border-top: 3px solid var(--fl-amber);
   padding: var(--fl-space-3);
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition), transform var(--fl-transition);
+}
+
+.arch__stat:hover {
+  box-shadow: var(--fl-shadow-md);
+  transform: translateY(-2px);
 }
 
 .arch__stat-value {
@@ -205,6 +212,12 @@ const stats = [
   border: 1px solid var(--fl-border);
   border-left: 3px solid var(--fl-slate);
   padding: var(--fl-space-4);
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition);
+}
+
+.arch__layer:hover {
+  box-shadow: var(--fl-shadow-md);
 }
 
 .arch__layer-number {

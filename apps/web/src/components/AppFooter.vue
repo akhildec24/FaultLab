@@ -10,7 +10,7 @@ const year = new Date().getFullYear()
           FaultLab is an open-source educational tool for distributed systems simulation.
         </div>
         <div class="fl-footer__meta-item fl-footer__meta-item--link">
-          <a href="https://github.com" class="fl-footer__link">Source code</a>
+          <a href="https://github.com/akhildec24/FaultLab" class="fl-footer__link">Source code</a>
         </div>
       </div>
       <div class="fl-footer__copyright">

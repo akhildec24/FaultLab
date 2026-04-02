@@ -9,7 +9,7 @@ import { ref } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
-import { PRESETS, type PresetScenario } from '@/graph/presets'
+import { PRESETS } from '@/graph/presets'
 
 const graph = useGraphStore()
 const sim = useSimulationStore()
@@ -48,7 +48,7 @@ function clearGraph() {
         class="preset-selector__select"
         @change="loadPreset"
       >
-        <option value="" disabled>Select a preset scenario…</option>
+        <option value="" disabled>{{ PRESETS.length }} preset scenarios…</option>
         <option v-for="p in PRESETS" :key="p.id" :value="p.id">
           {{ p.name }}
         </option>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import GraphEditor from '@/components/GraphEditor.vue'
 import NodeInspector from '@/components/NodeInspector.vue'
 import EdgeInspector from '@/components/EdgeInspector.vue'
@@ -14,9 +15,10 @@ import { useGraphStore } from '@/stores/graph'
 import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
 import { useCollab } from '@/collab/useCollab'
-import { generateLargeScenario } from '@/graph/presets'
+import { generateLargeScenario, PRESETS } from '@/graph/presets'
 import type { NodeKind } from '@/graph/types'
 
+const route = useRoute()
 const graph = useGraphStore()
 const sim = useSimulationStore()
 const animation = useAnimationStore()
@@ -44,6 +46,17 @@ function loadLargeScenario(): void {
 // Wire simulation events → animation store
 onMounted(() => {
   sim.onEvents((events) => animation.processEvents(events))
+
+  // Auto-load preset from query param (e.g. /editor?preset=retry-storm)
+  const presetId = route.query.preset as string | undefined
+  if (presetId) {
+    const preset = PRESETS.find((p) => p.id === presetId)
+    if (preset) {
+      animation.clear()
+      sim.reset()
+      graph.loadPreset(preset)
+    }
+  }
 })
 
 // Broadcast graph changes to peers (debounced)

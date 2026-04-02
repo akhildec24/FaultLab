@@ -70,6 +70,14 @@
   /* Focus outline */
   --fl-focus-width: 3px;
   --fl-focus-offset: 2px;
+
+  /* Shadows */
+  --fl-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --fl-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --fl-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+
+  /* Transitions */
+  --fl-transition: 0.15s ease;
 }
 
 /* Reset */
@@ -277,4 +285,34 @@ textarea:focus-visible,
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--fl-bg-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fl-grey-2);
+  border: 2px solid var(--fl-bg-alt);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fl-grey-3);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection colour */
+::selection {
+  background: var(--fl-amber);
+  color: var(--fl-slate);
 }

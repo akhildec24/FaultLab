@@ -1,19 +1,30 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
+
 const sections = [
   {
     title: 'Product specification',
     desc: 'What FaultLab is, who it serves, and what the first version includes.',
     href: '/docs/SPEC.md',
+    external: true,
   },
   {
     title: '30-day build plan',
     desc: 'Day-by-day breakdown of the entire build, week by week.',
     href: '/docs/PLAN.md',
+    external: true,
   },
   {
     title: 'Architecture decisions',
     desc: 'Records of key technical decisions and their trade-offs.',
     href: '/docs/decisions/',
+    external: true,
+  },
+  {
+    title: 'Build progress',
+    desc: 'Track day-by-day progress against the 30-day plan.',
+    href: '/docs/PROGRESS.md',
+    external: true,
   },
 ]
 
@@ -25,6 +36,8 @@ const stack = [
   { layer: 'Scenario language', tech: 'Custom DSL (lexer, parser, AST)' },
   { layer: 'Deployment', tech: 'Docker, Docker Compose, GitHub Actions' },
 ]
+
+const presetCount = 9
 </script>
 
 <template>
@@ -38,10 +51,16 @@ const stack = [
 
     <h2 class="docs__heading">Documents</h2>
     <div class="fl-grid fl-grid--2">
-      <div v-for="s in sections" :key="s.title" class="docs__card">
+      <a
+        v-for="s in sections"
+        :key="s.title"
+        :href="s.href"
+        class="docs__card"
+      >
         <h3>{{ s.title }}</h3>
         <p>{{ s.desc }}</p>
-      </div>
+        <span class="docs__card-cta">Read →</span>
+      </a>
     </div>
 
     <h2 class="docs__heading">Technology stack</h2>
@@ -60,11 +79,11 @@ const stack = [
       </tbody>
     </table>
 
-    <h2 class="docs__heading">Build progress</h2>
+    <h2 class="docs__heading">Preset scenarios</h2>
     <p class="docs__progress">
-      The project follows a 30-day build plan. Each day delivers a concrete
-      piece of working software. See the
-      <a href="/docs/PLAN.md">build plan</a> for the full schedule.
+      FaultLab ships with {{ presetCount }} ready-to-run preset scenarios —
+      from retry storms to replication delay. Open the
+      <RouterLink to="/editor">editor</RouterLink> to try them.
     </p>
   </div>
 </template>
@@ -83,9 +102,20 @@ const stack = [
 }
 
 .docs__card {
+  display: flex;
+  flex-direction: column;
   background: var(--fl-bg-alt);
   border-left: 3px solid var(--fl-amber);
   padding: var(--fl-space-4);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition), transform var(--fl-transition);
+}
+
+.docs__card:hover {
+  box-shadow: var(--fl-shadow-md);
+  transform: translateY(-2px);
 }
 
 .docs__card h3 {
@@ -96,6 +126,14 @@ const stack = [
 .docs__card p {
   font-size: var(--fl-size-16);
   color: var(--fl-grey-4);
+  flex: 1;
+}
+
+.docs__card-cta {
+  font-size: var(--fl-size-14);
+  font-weight: 700;
+  color: var(--fl-amber-hover);
+  margin-top: var(--fl-space-2);
 }
 
 .docs__table {

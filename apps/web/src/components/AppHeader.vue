@@ -14,7 +14,8 @@ import { FlaskConical } from '@lucide/vue'
         <nav class="fl-header__nav" aria-label="Primary">
           <RouterLink to="/" class="fl-header__link">Home</RouterLink>
           <RouterLink to="/editor" class="fl-header__link">Editor</RouterLink>
-          <RouterLink to="/docs" class="fl-header__link">Documentation</RouterLink>
+          <RouterLink to="/architecture" class="fl-header__link">Architecture</RouterLink>
+          <RouterLink to="/docs" class="fl-header__link">Docs</RouterLink>
         </nav>
       </div>
     </div>

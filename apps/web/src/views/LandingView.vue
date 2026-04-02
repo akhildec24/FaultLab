@@ -1,44 +1,24 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { PRESETS } from '@/graph/presets'
 
 const components = [
-  { name: 'Client', desc: 'Generates traffic at a configurable rate.', tag: 'Source' },
-  { name: 'Service', desc: 'Processes requests with capacity and latency limits.', tag: 'Compute' },
-  { name: 'Queue', desc: 'Buffers messages and overflows when full.', tag: 'Buffer' },
-  { name: 'Cache', desc: 'Returns cached responses or forwards misses.', tag: 'Storage' },
-  { name: 'Database', desc: 'Stores data with query capacity and latency.', tag: 'Storage' },
-  { name: 'External API', desc: 'Third-party service outside your control.', tag: 'External' },
+  { name: 'Client', desc: 'Generates traffic at a configurable rate.', tag: 'Source', icon: 'C' },
+  { name: 'Service', desc: 'Processes requests with capacity and latency limits.', tag: 'Compute', icon: 'S' },
+  { name: 'Queue', desc: 'Buffers messages and overflows when full.', tag: 'Buffer', icon: 'Q' },
+  { name: 'Cache', desc: 'Returns cached responses or forwards misses.', tag: 'Storage', icon: '$' },
+  { name: 'Database', desc: 'Stores data with query capacity and latency.', tag: 'Storage', icon: 'D' },
+  { name: 'External API', desc: 'Third-party service outside your control.', tag: 'External', icon: 'E' },
 ]
 
 const failures = [
-  'Take a server offline',
-  'Add 500ms of network latency',
-  'Disconnect the database',
-  'Cause packet loss',
-  'Fill the message queue',
-  'Slow an external API',
-  'Create a network partition',
-]
-
-const scenarios = [
-  {
-    name: 'Retry Storm',
-    desc: 'Traffic ramps up, a downstream service times out, retries amplify load and cascade through the system.',
-    lesson: 'Exponential backoff + circuit breakers',
-    color: '#ef4444',
-  },
-  {
-    name: 'Queue Overflow',
-    desc: 'A service with a bounded queue receives burst traffic. Watch requests pile up, get shed, and time out.',
-    lesson: 'Load shedding + queue limits',
-    color: '#f59e0b',
-  },
-  {
-    name: 'Replication Delay',
-    desc: 'A leader database replicates to a read replica with configurable lag. Stale reads cause inconsistency.',
-    lesson: 'Read-your-writes + quorum reads',
-    color: '#3b82f6',
-  },
+  { text: 'Take a server offline', icon: 'x' },
+  { text: 'Add 500ms of network latency', icon: '~' },
+  { text: 'Disconnect the database', icon: '/' },
+  { text: 'Cause packet loss', icon: '%' },
+  { text: 'Fill the message queue', icon: '#' },
+  { text: 'Slow an external API', icon: 's' },
+  { text: 'Create a network partition', icon: '|' },
 ]
 
 const metrics = [
@@ -49,30 +29,63 @@ const metrics = [
   { label: 'Retry storms', value: 'Cascade detection' },
   { label: 'Component utilisation', value: 'Saturation monitoring' },
 ]
+
+const scenarioColors: Record<string, string> = {
+  'overloaded-database': '#ef4444',
+  'cascading-failure': '#dc2626',
+  'network-partition': '#f97316',
+  'retry-storm': '#ef4444',
+  'queue-overflow': '#f59e0b',
+  'cache-replication': '#3b82f6',
+  'replication-delay': '#8b5cf6',
+  'microservice-mesh': '#06b6d4',
+  'thundering-herd': '#ec4899',
+}
 </script>
 
 <template>
   <div class="landing">
     <!-- Hero -->
-    <section class="fl-section landing__hero">
-      <div class="fl-container">
-        <p class="landing__kicker">Distributed systems simulator</p>
-        <h1 class="landing__title">Break systems on purpose.<br />Learn what happens.</h1>
-        <p class="landing__lede">
-          Design a software architecture, send simulated traffic through it,
-          inject failures, and watch the consequences unfold — all in your
-          browser.
-        </p>
-        <div class="landing__actions">
-          <RouterLink to="/editor" class="fl-button fl-button--primary">
-            Start building
-          </RouterLink>
-          <RouterLink to="/architecture" class="fl-button fl-button--secondary">
-            Architecture
-          </RouterLink>
-          <RouterLink to="/docs" class="fl-button fl-button--secondary">
-            Read the docs
-          </RouterLink>
+    <section class="landing__hero">
+      <div class="fl-container landing__hero-inner">
+        <div class="landing__hero-content">
+          <p class="landing__kicker">Distributed systems simulator</p>
+          <h1 class="landing__title">Break systems on purpose.<br />Learn what happens.</h1>
+          <p class="landing__lede">
+            Design a software architecture, send simulated traffic through it,
+            inject failures, and watch the consequences unfold — all in your
+            browser.
+          </p>
+          <div class="landing__actions">
+            <RouterLink to="/editor" class="fl-button fl-button--primary">
+              Start building
+            </RouterLink>
+            <RouterLink to="/architecture" class="fl-button fl-button--secondary">
+              Architecture
+            </RouterLink>
+            <RouterLink to="/docs" class="fl-button fl-button--secondary">
+              Read the docs
+            </RouterLink>
+          </div>
+        </div>
+        <div class="landing__hero-visual">
+          <div class="landing__hero-diagram">
+            <div class="landing__hero-node landing__hero-node--client">
+              <span class="landing__hero-node-icon">C</span>
+              <span class="landing__hero-node-label">Client</span>
+            </div>
+            <div class="landing__hero-line" />
+            <div class="landing__hero-node landing__hero-node--service">
+              <span class="landing__hero-node-icon">S</span>
+              <span class="landing__hero-node-label">Service</span>
+            </div>
+            <div class="landing__hero-line" />
+            <div class="landing__hero-node landing__hero-node--database">
+              <span class="landing__hero-node-icon">D</span>
+              <span class="landing__hero-node-label">Database</span>
+            </div>
+            <div class="landing__hero-pulse" />
+          </div>
         </div>
       </div>
     </section>
@@ -83,19 +96,19 @@ const metrics = [
         <h2 class="landing__heading">How it works</h2>
         <div class="fl-grid fl-grid--3">
           <div class="landing__card">
-            <span class="fl-tag fl-tag--blue">1</span>
+            <div class="landing__card-number">1</div>
             <h3>Design</h3>
             <p>Drag components onto a canvas. Connect them. Configure
             capacity, latency, error rates, and retry policies.</p>
           </div>
           <div class="landing__card">
-            <span class="fl-tag fl-tag--blue">2</span>
+            <div class="landing__card-number">2</div>
             <h3>Run</h3>
             <p>Send traffic through the system. Watch requests move in real
             time. See metrics update as load increases.</p>
           </div>
           <div class="landing__card">
-            <span class="fl-tag fl-tag--blue">3</span>
+            <div class="landing__card-number">3</div>
             <h3>Break</h3>
             <p>Inject failures — crash a server, add latency, disconnect a
             database. Observe how the architecture degrades.</p>
@@ -113,11 +126,14 @@ const metrics = [
         </p>
         <div class="fl-grid fl-grid--3">
           <div v-for="c in components" :key="c.name" class="landing__component">
-            <div class="landing__component-header">
-              <span class="fl-tag fl-tag--green">{{ c.tag }}</span>
-              <h3>{{ c.name }}</h3>
+            <div class="landing__component-icon">{{ c.icon }}</div>
+            <div class="landing__component-body">
+              <div class="landing__component-header">
+                <span class="fl-tag fl-tag--green">{{ c.tag }}</span>
+                <h3>{{ c.name }}</h3>
+              </div>
+              <p>{{ c.desc }}</p>
             </div>
-            <p>{{ c.desc }}</p>
           </div>
         </div>
       </div>
@@ -130,9 +146,12 @@ const metrics = [
         <p class="landing__subheading">
           Trigger incidents mid-simulation and watch the system react.
         </p>
-        <ul class="fl-list fl-list--bullet landing__failure-list">
-          <li v-for="f in failures" :key="f">{{ f }}</li>
-        </ul>
+        <div class="landing__failures">
+          <div v-for="f in failures" :key="f.text" class="landing__failure">
+            <span class="landing__failure-icon">{{ f.icon }}</span>
+            <span>{{ f.text }}</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -149,58 +168,26 @@ const metrics = [
       </div>
     </section>
 
-    <!-- Demo scenario -->
+    <!-- Preset scenarios -->
     <section class="fl-section fl-section--alt">
       <div class="fl-container">
-        <h2 class="landing__heading">Example: the retry storm</h2>
-        <div class="landing__demo">
-          <div class="landing__demo-diagram">
-            <div class="landing__demo-node">Customer</div>
-            <div class="landing__demo-arrow">↓</div>
-            <div class="landing__demo-node">Load Balancer</div>
-            <div class="landing__demo-arrow">↓</div>
-            <div class="landing__demo-node">API Servers</div>
-            <div class="landing__demo-arrow">↓</div>
-            <div class="landing__demo-node">Payment Service</div>
-            <div class="landing__demo-arrow">↓</div>
-            <div class="landing__demo-node landing__demo-node--danger">Database</div>
-          </div>
-          <div class="landing__demo-text">
-            <p>Traffic ramps from 50 to 1,000 requests per second. The payment
-            service begins timing out. The API retries every failed request
-            immediately.</p>
-            <p>Retries create more traffic. The database is overwhelmed. A
-            retry storm cascades through the system.</p>
-            <p>Enable exponential backoff, a circuit breaker, and a max retry
-            limit. Run the same simulation. Compare the results.</p>
-            <RouterLink to="/editor" class="fl-button fl-button--primary">
-              Try this scenario
-            </RouterLink>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Showcase scenarios -->
-    <section class="fl-section">
-      <div class="fl-container">
-        <h2 class="landing__heading">Three scenarios to learn from</h2>
+        <h2 class="landing__heading">Preset scenarios</h2>
         <p class="landing__subheading">
-          Each scenario teaches a specific distributed systems lesson.
+          {{ PRESETS.length }} ready-to-run scenarios. Load one in the editor and press Run.
         </p>
-        <div class="fl-grid fl-grid--3">
-          <div v-for="s in scenarios" :key="s.name" class="landing__scenario">
-            <div class="landing__scenario-bar" :style="{ background: s.color }" />
-            <h3>{{ s.name }}</h3>
-            <p>{{ s.desc }}</p>
-            <p class="landing__scenario-lesson">
-              <strong>Lesson:</strong> {{ s.lesson }}
-            </p>
-          </div>
+        <div class="landing__presets">
+          <RouterLink
+            v-for="p in PRESETS"
+            :key="p.id"
+            :to="{ path: '/editor', query: { preset: p.id } }"
+            class="landing__preset"
+          >
+            <div class="landing__preset-bar" :style="{ background: scenarioColors[p.id] || '#f59e0b' }" />
+            <h3>{{ p.name }}</h3>
+            <p>{{ p.description }}</p>
+            <span class="landing__preset-cta">Open in editor →</span>
+          </RouterLink>
         </div>
-        <RouterLink to="/editor" class="fl-button fl-button--primary landing__scenario-cta">
-          Open the editor
-        </RouterLink>
       </div>
     </section>
 
@@ -262,10 +249,22 @@ const metrics = [
 </template>
 
 <style scoped>
+/* Hero */
 .landing__hero {
   padding: var(--fl-space-7) 0;
   border-bottom: 1px solid var(--fl-border);
   background: linear-gradient(180deg, var(--fl-bg-alt) 0%, var(--fl-white) 100%);
+}
+
+.landing__hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fl-space-6);
+  align-items: center;
+}
+
+.landing__hero-content {
+  max-width: 540px;
 }
 
 .landing__kicker {
@@ -287,7 +286,6 @@ const metrics = [
   font-size: var(--fl-size-24);
   line-height: var(--fl-leading-normal);
   color: var(--fl-grey-4);
-  max-width: 640px;
   margin-bottom: var(--fl-space-5);
 }
 
@@ -297,6 +295,104 @@ const metrics = [
   flex-wrap: wrap;
 }
 
+/* Hero visual */
+.landing__hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing__hero-diagram {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fl-space-3);
+}
+
+.landing__hero-node {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-2);
+  width: 200px;
+  padding: var(--fl-space-2) var(--fl-space-3);
+  border: 2px solid var(--fl-slate);
+  background: var(--fl-white);
+  box-shadow: var(--fl-shadow-md);
+  transition: transform var(--fl-transition), box-shadow var(--fl-transition);
+}
+
+.landing__hero-node:hover {
+  transform: translateX(4px);
+  box-shadow: var(--fl-shadow-lg);
+}
+
+.landing__hero-node--client {
+  border-color: var(--fl-amber);
+}
+
+.landing__hero-node--service {
+  border-color: #6366f1;
+}
+
+.landing__hero-node--database {
+  border-color: var(--fl-green);
+}
+
+.landing__hero-node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--fl-white);
+  font-weight: 700;
+  font-size: var(--fl-size-16);
+  flex-shrink: 0;
+}
+
+.landing__hero-node--client .landing__hero-node-icon {
+  background: var(--fl-amber);
+}
+
+.landing__hero-node--service .landing__hero-node-icon {
+  background: #6366f1;
+}
+
+.landing__hero-node--database .landing__hero-node-icon {
+  background: var(--fl-green);
+}
+
+.landing__hero-node-label {
+  font-weight: 700;
+  font-size: var(--fl-size-16);
+  color: var(--fl-text);
+}
+
+.landing__hero-line {
+  width: 2px;
+  height: 24px;
+  background: var(--fl-grey-2);
+}
+
+.landing__hero-pulse {
+  position: absolute;
+  left: 16px;
+  top: 30px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fl-amber);
+  animation: pulse-down 2s ease-in-out infinite;
+}
+
+@keyframes pulse-down {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(180px); opacity: 0; }
+}
+
+/* Headings */
 .landing__heading {
   font-size: var(--fl-size-36);
   margin-bottom: var(--fl-space-3);
@@ -309,16 +405,38 @@ const metrics = [
   max-width: 640px;
 }
 
+/* Cards */
 .landing__card {
   background: var(--fl-white);
   border: 1px solid var(--fl-border);
   border-top: 3px solid var(--fl-amber);
   padding: var(--fl-space-4);
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition), transform var(--fl-transition);
+}
+
+.landing__card:hover {
+  box-shadow: var(--fl-shadow-md);
+  transform: translateY(-2px);
+}
+
+.landing__card-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fl-slate);
+  color: var(--fl-amber);
+  font-size: var(--fl-size-19);
+  font-weight: 800;
+  margin-bottom: var(--fl-space-2);
 }
 
 .landing__card h3 {
   font-size: var(--fl-size-24);
-  margin: var(--fl-space-2) 0 var(--fl-space-2);
+  margin-bottom: var(--fl-space-2);
 }
 
 .landing__card p {
@@ -326,38 +444,95 @@ const metrics = [
   color: var(--fl-grey-4);
 }
 
+/* Components */
 .landing__component {
+  display: flex;
+  gap: var(--fl-space-3);
   background: var(--fl-white);
   border: 1px solid var(--fl-border);
   border-left: 3px solid var(--fl-slate);
-  padding: var(--fl-space-4);
+  padding: var(--fl-space-3);
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition);
+}
+
+.landing__component:hover {
+  box-shadow: var(--fl-shadow-md);
+}
+
+.landing__component-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--fl-slate);
+  color: var(--fl-amber);
+  font-weight: 800;
+  font-size: var(--fl-size-19);
+  flex-shrink: 0;
 }
 
 .landing__component-header {
   display: flex;
   align-items: center;
   gap: var(--fl-space-2);
-  margin-bottom: var(--fl-space-2);
+  margin-bottom: var(--fl-space-1);
 }
 
 .landing__component-header h3 {
-  font-size: var(--fl-size-24);
+  font-size: var(--fl-size-19);
 }
 
 .landing__component p {
-  font-size: var(--fl-size-19);
+  font-size: var(--fl-size-16);
   color: var(--fl-grey-4);
 }
 
-.landing__failure-list {
-  max-width: 480px;
+/* Failures */
+.landing__failures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fl-space-2);
+  max-width: 720px;
 }
 
-.landing__failure-list li {
-  font-size: var(--fl-size-19);
-  margin-bottom: var(--fl-space-2);
+.landing__failure {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-2);
+  padding: var(--fl-space-1) var(--fl-space-3);
+  background: var(--fl-white);
+  border: 1px solid var(--fl-border);
+  border-left: 3px solid var(--fl-red);
+  font-size: var(--fl-size-16);
+  color: var(--fl-text);
+  box-shadow: var(--fl-shadow-sm);
+  transition: border-color var(--fl-transition), box-shadow var(--fl-transition);
 }
 
+.landing__failure:hover {
+  border-left-color: var(--fl-amber);
+  box-shadow: var(--fl-shadow-md);
+}
+
+.landing__failure-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--fl-red-light);
+  color: var(--fl-red);
+  font-family: var(--fl-font-mono);
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* Metrics */
 .landing__metric {
   border-left: 3px solid var(--fl-amber);
   padding-left: var(--fl-space-4);
@@ -373,82 +548,55 @@ const metrics = [
   color: var(--fl-grey-4);
 }
 
-.landing__scenario {
+/* Presets */
+.landing__presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--fl-space-3);
+}
+
+.landing__preset {
+  display: flex;
+  flex-direction: column;
   background: var(--fl-white);
   border: 1px solid var(--fl-border);
   padding: var(--fl-space-4);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--fl-shadow-sm);
+  transition: box-shadow var(--fl-transition), transform var(--fl-transition);
 }
 
-.landing__scenario-bar {
+.landing__preset:hover {
+  box-shadow: var(--fl-shadow-md);
+  transform: translateY(-2px);
+}
+
+.landing__preset-bar {
   height: 4px;
   width: 100%;
   margin-bottom: var(--fl-space-3);
 }
 
-.landing__scenario h3 {
-  font-size: var(--fl-size-24);
+.landing__preset h3 {
+  font-size: var(--fl-size-19);
   margin-bottom: var(--fl-space-2);
 }
 
-.landing__scenario p {
-  font-size: var(--fl-size-16);
-  color: var(--fl-grey-4);
-  margin-bottom: var(--fl-space-2);
-}
-
-.landing__scenario-lesson {
+.landing__preset p {
   font-size: var(--fl-size-14);
-  color: var(--fl-grey-3);
-}
-
-.landing__scenario-cta {
-  margin-top: var(--fl-space-5);
-}
-
-.landing__demo {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: var(--fl-space-6);
-  align-items: start;
-}
-
-.landing__demo-diagram {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--fl-space-1);
-}
-
-.landing__demo-node {
-  width: 100%;
-  text-align: center;
-  background: var(--fl-white);
-  border: 2px solid var(--fl-slate);
-  padding: var(--fl-space-2) var(--fl-space-3);
-  font-weight: 700;
-  font-size: var(--fl-size-16);
-}
-
-.landing__demo-node--danger {
-  border-color: var(--fl-red);
-  color: var(--fl-red);
-  background: var(--fl-red-light);
-}
-
-.landing__demo-arrow {
-  font-size: var(--fl-size-19);
-  color: var(--fl-grey-3);
-}
-
-.landing__demo-text p {
+  color: var(--fl-grey-4);
   margin-bottom: var(--fl-space-3);
-  font-size: var(--fl-size-19);
+  flex: 1;
 }
 
-.landing__demo-text .fl-button {
-  margin-top: var(--fl-space-2);
+.landing__preset-cta {
+  font-size: var(--fl-size-14);
+  font-weight: 700;
+  color: var(--fl-amber-hover);
 }
 
+/* Stack */
 .landing__stack {
   display: flex;
   flex-direction: column;
@@ -473,6 +621,7 @@ const metrics = [
   padding: var(--fl-space-3) var(--fl-space-4);
   font-size: var(--fl-size-19);
   font-weight: 700;
+  box-shadow: var(--fl-shadow-sm);
 }
 
 .landing__stack-arrow {
@@ -480,14 +629,19 @@ const metrics = [
   color: var(--fl-grey-3);
 }
 
+/* CTA */
 .landing__cta-inner {
   text-align: center;
   padding: var(--fl-space-6) var(--fl-space-4);
 }
 
 @media (max-width: 768px) {
-  .landing__demo {
+  .landing__hero-inner {
     grid-template-columns: 1fr;
+  }
+
+  .landing__hero-visual {
+    display: none;
   }
 
   .landing__title {
