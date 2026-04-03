@@ -84,11 +84,25 @@ function screenToGraph(clientX: number, clientY: number): { x: number; y: number
   }
 }
 
+// --- Space + hand mode ---
+const spaceMode = ref(false)
+
 // --- Panning ---
 const isPanning = ref(false)
 let panStart = { x: 0, y: 0, panX: 0, panY: 0 }
 
 function startPan(e: MouseEvent) {
+  // In space mode, always pan regardless of target
+  if (spaceMode.value) {
+    isPanning.value = true
+    panStart = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: graph.view.panX,
+      panY: graph.view.panY,
+    }
+    return
+  }
   if (e.target === svgRef.value || (e.target as Element).classList.contains('canvas-bg')) {
     isPanning.value = true
     panStart = {
@@ -116,6 +130,7 @@ const draggedNode = ref<string | null>(null)
 let dragOffset = { x: 0, y: 0 }
 
 function startDragNode(e: MouseEvent, nodeId: string) {
+  if (spaceMode.value) return // Don't drag nodes in hand mode
   e.stopPropagation()
   const node = graph.nodes.find((n) => n.id === nodeId)
   if (!node) return
@@ -182,6 +197,11 @@ function onMouseUp() {
 
 // --- Keyboard ---
 function onKeydown(e: KeyboardEvent) {
+  if (e.code === 'Space' && !spaceMode.value) {
+    e.preventDefault()
+    spaceMode.value = true
+    return
+  }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (graph.selectedNodeId) {
       graph.removeNode(graph.selectedNodeId)
@@ -195,11 +215,20 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+function onKeyup(e: KeyboardEvent) {
+  if (e.code === 'Space') {
+    spaceMode.value = false
+    isPanning.value = false
+  }
+}
+
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('keyup', onKeyup)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('keyup', onKeyup)
 })
 
 // --- Zoom on wheel ---
@@ -301,7 +330,7 @@ defineExpose({ addNode })
     <svg
       ref="svgRef"
       class="graph-canvas"
-      :class="{ 'graph-canvas--panning': isPanning, 'graph-canvas--connecting': connectMode }"
+      :class="{ 'graph-canvas--panning': isPanning, 'graph-canvas--connecting': connectMode, 'graph-canvas--hand': spaceMode }"
       @mousedown="startPan"
       @mousemove="onMouseMove"
       @mouseup="onMouseUp"
@@ -462,6 +491,14 @@ defineExpose({ addNode })
 }
 
 .graph-canvas--panning {
+  cursor: grabbing;
+}
+
+.graph-canvas--hand {
+  cursor: grab;
+}
+
+.graph-canvas--hand.graph-canvas--panning {
   cursor: grabbing;
 }
 

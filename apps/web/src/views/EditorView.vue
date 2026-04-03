@@ -26,7 +26,7 @@ const animation = useAnimationStore()
 const collab = useCollab(graph.nodes, graph.edges)
 
 const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
-const showTimeline = ref(false)
+const showTimeline = ref(true)
 const bottomTab = ref<'timeline' | 'dashboard' | 'code'>('timeline')
 const showStorage = ref(false)
 const showCollab = ref(false)

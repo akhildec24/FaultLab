@@ -181,6 +181,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     try {
       const c = ensureClient()
       const steps = await c.run(maxSteps)
+      if (steps === 0) {
+        running.value = false
+      }
       await refreshStatus()
       return steps
     } catch (e) {

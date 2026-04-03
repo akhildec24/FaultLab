@@ -18,22 +18,31 @@ const animation = useAnimationStore()
 const selectedPreset = ref<string>('')
 const showDescription = ref<string>('')
 
-function loadPreset() {
+async function loadPreset() {
   const preset = PRESETS.find((p) => p.id === selectedPreset.value)
   if (!preset) return
 
-  // Reset simulation state
+  // Stop any running simulation
   animation.clear()
-  sim.reset()
+  try {
+    await sim.pause()
+    await sim.reset()
+  } catch {
+    // Ignore errors when no scenario was loaded
+  }
 
   // Load the preset into the graph
   graph.loadPreset(preset)
   showDescription.value = preset.description
 }
 
-function clearGraph() {
+async function clearGraph() {
   animation.clear()
-  sim.reset()
+  try {
+    await sim.reset()
+  } catch {
+    // Ignore
+  }
   graph.clear()
   selectedPreset.value = ''
   showDescription.value = ''

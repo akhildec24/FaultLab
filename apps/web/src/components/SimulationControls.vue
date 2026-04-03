@@ -21,6 +21,7 @@ const sim = useSimulationStore()
 const animation = useAnimationStore()
 
 const showErrors = ref(false)
+const isRunningLoop = ref(false)
 
 const validation = computed(() =>
   validateGraph(graph.nodes, graph.edges),
@@ -39,11 +40,26 @@ async function startSimulation() {
   if (sim.error || !sim.workerHealthy) return
   await sim.start()
   if (sim.error) return
-  // Run a batch of steps to get things going
-  await sim.run(500)
+  // Start continuous run loop
+  isRunningLoop.value = true
+  runLoop()
+}
+
+async function runLoop() {
+  while (isRunningLoop.value && sim.running && !sim.error) {
+    const steps = await sim.run(500)
+    if (steps === 0) {
+ // No more events to process — engine exhausted
+ break
+    }
+ // Small yield to let UI update
+ await new Promise((r) => setTimeout(r, 16))
+  }
+  isRunningLoop.value = false
 }
 
 async function pauseSimulation() {
+  isRunningLoop.value = false
   await sim.pause()
 }
 
@@ -52,11 +68,14 @@ async function stepSimulation() {
 }
 
 async function resetSimulation() {
+  isRunningLoop.value = false
   await sim.reset()
 }
 
 async function continueRun() {
-  await sim.run(500)
+  if (!sim.loaded) return
+  isRunningLoop.value = true
+  runLoop()
 }
 
 const metrics = computed(() => sim.metrics)
@@ -165,40 +184,40 @@ const simClock = computed(() => {
       </div>
     </div>
 
-    <!-- Metrics -->
-    <div class="sim-controls__metrics" v-if="metrics">
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Requests</span>
-        <span class="sim-controls__metric-value">{{ metrics.total_requests }}</span>
+    <!-- Metrics + Failure injection side by side -->
+    <div class="sim-controls__row" v-if="sim.loaded">
+      <div class="sim-controls__metrics" v-if="metrics">
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Requests</span>
+          <span class="sim-controls__metric-value">{{ metrics.total_requests }}</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Success</span>
+          <span class="sim-controls__metric-value sim-controls__metric--ok">{{ metrics.successful }}</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Failed</span>
+          <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.failed }}</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Timed out</span>
+          <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.timed_out }}</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Dropped</span>
+          <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.dropped }}</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">Avg latency</span>
+          <span class="sim-controls__metric-value">{{ Math.round(metrics.avg_latency_ms) }}ms</span>
+        </div>
+        <div class="sim-controls__metric">
+          <span class="sim-controls__metric-label">P95</span>
+          <span class="sim-controls__metric-value">{{ Math.round(metrics.p95_latency_ms) }}ms</span>
+        </div>
       </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Success</span>
-        <span class="sim-controls__metric-value sim-controls__metric--ok">{{ metrics.successful }}</span>
-      </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Failed</span>
-        <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.failed }}</span>
-      </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Timed out</span>
-        <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.timed_out }}</span>
-      </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Dropped</span>
-        <span class="sim-controls__metric-value sim-controls__metric--err">{{ metrics.dropped }}</span>
-      </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">Avg latency</span>
-        <span class="sim-controls__metric-value">{{ Math.round(metrics.avg_latency_ms) }}ms</span>
-      </div>
-      <div class="sim-controls__metric">
-        <span class="sim-controls__metric-label">P95</span>
-        <span class="sim-controls__metric-value">{{ Math.round(metrics.p95_latency_ms) }}ms</span>
-      </div>
+      <FailurePanel />
     </div>
-
-    <!-- Failure injection -->
-    <FailurePanel v-if="sim.loaded" />
   </div>
 </template>
 
@@ -327,10 +346,17 @@ const simClock = computed(() => {
   color: var(--fl-amber);
 }
 
+.sim-controls__row {
+  display: flex;
+  gap: var(--fl-space-2);
+  align-items: stretch;
+}
+
 .sim-controls__metrics {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: var(--fl-space-1);
+  flex: 1;
 }
 
 .sim-controls__metric {

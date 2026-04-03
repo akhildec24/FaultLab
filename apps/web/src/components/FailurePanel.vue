@@ -115,98 +115,84 @@ const canInject = computed(() => {
 
 <template>
   <div class="failure-panel">
-    <div class="failure-panel__title">Failure Injection</div>
+    <span class="failure-panel__title">⚡ Failures</span>
 
-    <div class="failure-panel__row">
-      <select v-model="selectedFailure" class="failure-panel__select">
-        <option v-for="ft in failureTypes" :key="ft.value" :value="ft.value">
-          {{ ft.label }}
-        </option>
-      </select>
-    </div>
+    <select v-model="selectedFailure" class="failure-panel__select">
+      <option v-for="ft in failureTypes" :key="ft.value" :value="ft.value">
+        {{ ft.label }}
+      </option>
+    </select>
 
     <!-- Node selector -->
-    <div v-if="isNodeFailure" class="failure-panel__row">
-      <select v-model="selectedNodeId" class="failure-panel__select">
-        <option value="" disabled>Select node…</option>
-        <option v-for="n in nodeOptions" :key="n.id" :value="n.id">
-          {{ n.label }}
-        </option>
-      </select>
-    </div>
+    <select v-if="isNodeFailure" v-model="selectedNodeId" class="failure-panel__select">
+      <option value="" disabled>Node…</option>
+      <option v-for="n in nodeOptions" :key="n.id" :value="n.id">
+        {{ n.label }}
+      </option>
+    </select>
 
     <!-- Edge selector -->
-    <div v-if="isEdgeFailure" class="failure-panel__row">
-      <select
-        :value="`${selectedEdgeFrom}->${selectedEdgeTo}`"
-        @change="(e) => {
-          const val = (e.target as HTMLSelectElement).value
-          const [from, to] = val.split('->')
-          selectedEdgeFrom = from
-          selectedEdgeTo = to
-        }"
-        class="failure-panel__select"
+    <select
+      v-if="isEdgeFailure"
+      :value="`${selectedEdgeFrom}->${selectedEdgeTo}`"
+      @change="(e) => {
+        const val = (e.target as HTMLSelectElement).value
+        const [from, to] = val.split('->')
+        selectedEdgeFrom = from
+        selectedEdgeTo = to
+      }"
+      class="failure-panel__select"
+    >
+      <option value="" disabled>Link…</option>
+      <option
+        v-for="edge in edgeOptions"
+        :key="edge.id"
+        :value="edge.id"
       >
-        <option value="" disabled>Select link…</option>
-        <option
-          v-for="edge in edgeOptions"
-          :key="edge.id"
-          :value="edge.id"
-        >
-          {{ edge.label }}
-        </option>
-      </select>
-    </div>
+        {{ edge.label }}
+      </option>
+    </select>
 
     <!-- Latency input -->
-    <div v-if="needsLatency" class="failure-panel__row">
-      <label class="failure-panel__label">
-        Latency (ms)
-        <input
-          v-model.number="latencyAmount"
-          type="number"
-          min="1"
-          max="10000"
-          class="failure-panel__input"
-        />
-      </label>
-    </div>
+    <input
+      v-if="needsLatency"
+      v-model.number="latencyAmount"
+      type="number"
+      min="1"
+      max="10000"
+      class="failure-panel__input"
+      title="Latency (ms)"
+    />
 
     <!-- Packet loss input -->
-    <div v-if="needsPacketLoss" class="failure-panel__row">
-      <label class="failure-panel__label">
-        Packet loss rate (0–1)
-        <input
-          v-model.number="packetLossRate"
-          type="number"
-          min="0"
-          max="1"
-          step="0.05"
-          class="failure-panel__input"
-        />
-      </label>
-    </div>
+    <input
+      v-if="needsPacketLoss"
+      v-model.number="packetLossRate"
+      type="number"
+      min="0"
+      max="1"
+      step="0.05"
+      class="failure-panel__input"
+      title="Packet loss rate (0–1)"
+    />
 
     <!-- Capacity input -->
-    <div v-if="needsCapacity" class="failure-panel__row">
-      <label class="failure-panel__label">
-        New capacity
-        <input
-          v-model.number="newCapacity"
-          type="number"
-          min="0"
-          max="1000"
-          class="failure-panel__input"
-        />
-      </label>
-    </div>
+    <input
+      v-if="needsCapacity"
+      v-model.number="newCapacity"
+      type="number"
+      min="0"
+      max="1000"
+      class="failure-panel__input"
+      title="New capacity"
+    />
 
     <button
       class="fl-button fl-button--warning failure-panel__btn"
       :disabled="!canInject"
       @click="inject"
     >
-      ⚡ Inject
+      Inject
     </button>
   </div>
 </template>
@@ -214,11 +200,14 @@ const canInject = computed(() => {
 <style scoped>
 .failure-panel {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--fl-space-1);
-  padding: var(--fl-space-2) var(--fl-space-3);
-  background: var(--fl-slate);
-  border-top: 1px solid var(--fl-slate-light);
+  padding: var(--fl-space-1) var(--fl-space-2);
+  background: var(--fl-slate-light);
+  border-left: 2px solid var(--fl-amber);
+  flex-shrink: 0;
 }
 
 .failure-panel__title {
@@ -229,20 +218,15 @@ const canInject = computed(() => {
   letter-spacing: 0.05em;
 }
 
-.failure-panel__row {
-  display: flex;
-  align-items: center;
-}
-
 .failure-panel__select {
-  flex: 1;
   font-family: var(--fl-font);
   font-size: var(--fl-size-14);
-  padding: var(--fl-space-1) var(--fl-space-2);
-  background: var(--fl-slate-light);
+  padding: 4px 8px;
+  background: var(--fl-slate);
   color: var(--fl-white);
-  border: 1px solid var(--fl-slate-light);
+  border: 1px solid var(--fl-slate);
   cursor: pointer;
+  width: auto;
 }
 
 .failure-panel__select:focus {
@@ -250,24 +234,14 @@ const canInject = computed(() => {
   outline-offset: -1px;
 }
 
-.failure-panel__label {
-  display: flex;
-  align-items: center;
-  gap: var(--fl-space-2);
-  font-size: var(--fl-size-14);
-  color: var(--fl-grey-3);
-  width: 100%;
-}
-
 .failure-panel__input {
-  flex: 1;
   font-family: var(--fl-font);
   font-size: var(--fl-size-14);
-  padding: var(--fl-space-1) var(--fl-space-2);
-  background: var(--fl-slate-light);
+  padding: 4px 8px;
+  background: var(--fl-slate);
   color: var(--fl-white);
-  border: 1px solid var(--fl-slate-light);
-  width: 80px;
+  border: 1px solid var(--fl-slate);
+  width: 70px;
 }
 
 .failure-panel__input:focus {
@@ -277,8 +251,7 @@ const canInject = computed(() => {
 
 .failure-panel__btn {
   font-size: var(--fl-size-14);
-  padding: var(--fl-space-1) var(--fl-space-2);
-  align-self: flex-start;
+  padding: 4px 12px;
 }
 
 .failure-panel__btn:disabled {
