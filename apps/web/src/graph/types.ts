@@ -62,7 +62,7 @@ export interface ViewTransform {
 }
 
 /** Default node dimensions for rendering. */
-export const NODE_WIDTH = 140
+export const NODE_WIDTH = 180
 export const NODE_HEIGHT = 60
 
 /** Node colours per kind, using the FaultLab palette. */
