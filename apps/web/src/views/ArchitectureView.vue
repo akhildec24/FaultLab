@@ -82,7 +82,7 @@ const stats = [
   { label: 'Rust tests', value: '146' },
   { label: 'Gleam tests', value: '12' },
   { label: 'Node types', value: '3' },
-  { label: 'Preset scenarios', value: '9' },
+  { label: 'Preset scenarios', value: '15' },
   { label: 'Max nodes (tested)', value: '120+' },
   { label: 'Build days', value: '30' },
 ]

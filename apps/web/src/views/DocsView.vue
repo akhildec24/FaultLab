@@ -37,7 +37,7 @@ const stack = [
   { layer: 'Deployment', tech: 'Docker, Docker Compose, GitHub Actions' },
 ]
 
-const presetCount = 9
+const presetCount = 15
 </script>
 
 <template>

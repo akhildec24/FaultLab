@@ -40,6 +40,12 @@ const scenarioColors: Record<string, string> = {
   'replication-delay': '#8b5cf6',
   'microservice-mesh': '#06b6d4',
   'thundering-herd': '#ec4899',
+  'ecommerce-checkout': '#10b981',
+  'streaming-cdn': '#6366f1',
+  'banking-transaction': '#0ea5e9',
+  'ride-sharing': '#f43f5e',
+  'social-feed': '#8b5cf6',
+  'iot-pipeline': '#14b8a6',
 }
 </script>
 
