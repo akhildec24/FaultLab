@@ -117,6 +117,15 @@ onUnmounted(() => {
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('database')">
           + Database
         </button>
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('queue')">
+          + Queue
+        </button>
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('cache')">
+          + Cache
+        </button>
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="addNode('external_api')">
+          + External API
+        </button>
       </div>
       <div class="graph-toolbar__group">
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="graph.zoomOut">−</button>

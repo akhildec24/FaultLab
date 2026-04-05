@@ -5,7 +5,7 @@
  * to the simulation scenario's `NodeConfig` and `ConnectionConfig`.
  */
 
-export type NodeKind = 'client' | 'service' | 'database'
+export type NodeKind = 'client' | 'service' | 'database' | 'queue' | 'cache' | 'external_api'
 
 export type RetryStrategyType = 'immediate' | 'fixed' | 'exponential'
 
@@ -70,6 +70,9 @@ export const NODE_COLORS: Record<NodeKind, { fill: string; stroke: string; text:
   client: { fill: '#fef3c7', stroke: '#f59e0b', text: '#1a1a2e' },
   service: { fill: '#e0e7ff', stroke: '#6366f1', text: '#1a1a2e' },
   database: { fill: '#dcfce7', stroke: '#059669', text: '#1a1a2e' },
+  queue: { fill: '#fce7f3', stroke: '#ec4899', text: '#1a1a2e' },
+  cache: { fill: '#fff7ed', stroke: '#ea580c', text: '#1a1a2e' },
+  external_api: { fill: '#f1f5f9', stroke: '#64748b', text: '#1a1a2e' },
 }
 
 /** Node icons per kind (simple text glyphs for SVG). */
@@ -77,6 +80,9 @@ export const NODE_ICONS: Record<NodeKind, string> = {
   client: 'C',
   service: 'S',
   database: 'D',
+  queue: 'Q',
+  cache: '$',
+  external_api: 'E',
 }
 
 /** Default config values per node kind. */
@@ -116,6 +122,45 @@ export const DEFAULT_NODE_CONFIG: Record<NodeKind, Omit<GraphNode, 'id' | 'x' | 
     timeout_ms: 2000,
     queue_limit: 50,
     retry_policy: { strategy: 'fixed', max_retries: 1, jitter: 0, budget: null },
+    shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
+  },
+  queue: {
+    kind: 'queue',
+    label: 'Message Queue',
+    capacity: 100,
+    latency_ms: 3,
+    error_rate: 0,
+    timeout_ms: 500,
+    queue_limit: 500,
+    retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+    shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
+  },
+  cache: {
+    kind: 'cache',
+    label: 'Cache',
+    capacity: 150,
+    latency_ms: 2,
+    error_rate: 0,
+    timeout_ms: 200,
+    queue_limit: 300,
+    retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+    shed_policy: 'drop',
+    replication_role: 'standalone',
+    replication_lag_ms: 0,
+  },
+  external_api: {
+    kind: 'external_api',
+    label: 'External API',
+    capacity: 10,
+    latency_ms: 100,
+    error_rate: 0.05,
+    timeout_ms: 5000,
+    queue_limit: 20,
+    retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.3, budget: null },
     shed_policy: 'drop',
     replication_role: 'standalone',
     replication_lag_ms: 0,

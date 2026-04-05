@@ -287,6 +287,39 @@ const tempEdgePath = computed(() => {
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
 })
 
+// --- Node shape paths ---
+// Returns SVG path data for different node shapes.
+// All shapes fit within NODE_WIDTH x NODE_HEIGHT bounding box.
+function nodeShape(kind: NodeKind): string {
+  const w = NODE_WIDTH
+  const h = NODE_HEIGHT
+  const r = 6 // corner radius
+  switch (kind) {
+    case 'client':
+      // Pill / fully rounded rect
+      return `M ${h / 2} 0 L ${w - h / 2} 0 A ${h / 2} ${h / 2} 0 0 1 ${w - h / 2} ${h} L ${h / 2} ${h} A ${h / 2} ${h / 2} 0 0 1 ${h / 2} 0 Z`
+    case 'database':
+      // Cylinder: top ellipse + body + bottom ellipse
+      const er = h * 0.15
+      return `M 0 ${er} A ${w / 2} ${er} 0 0 0 ${w} ${er} L ${w} ${h - er} A ${w / 2} ${er} 0 0 1 0 ${h - er} Z`
+    case 'queue':
+      // Parallelogram (slanted rect)
+      const skew = 12
+      return `M ${skew} 0 L ${w} 0 L ${w - skew} ${h} L 0 ${h} Z`
+    case 'cache':
+      // Hexagon
+      const hs = 14
+      return `M ${hs} 0 L ${w - hs} 0 L ${w} ${h / 2} L ${w - hs} ${h} L ${hs} ${h} L 0 ${h / 2} Z`
+    case 'external_api':
+      // Cloud-ish shape (rounded bumps)
+      return `M ${h * 0.3} ${h * 0.5} Q 0 ${h * 0.5} ${h * 0.2} ${h * 0.15} Q ${h * 0.4} 0 ${h * 0.7} ${h * 0.1} Q ${w * 0.3} 0 ${w * 0.45} ${h * 0.15} Q ${w} ${h * 0.1} ${w * 0.95} ${h * 0.4} Q ${w + 10} ${h * 0.7} ${w * 0.9} ${h * 0.85} Q ${w * 0.7} ${h} ${w * 0.5} ${h * 0.9} Q ${w * 0.2} ${h} ${h * 0.15} ${h * 0.85} Q -10 ${h * 0.7} ${h * 0.3} ${h * 0.5} Z`
+    case 'service':
+    default:
+      // Standard rounded rectangle
+      return `M ${r} 0 L ${w - r} 0 A ${r} ${r} 0 0 1 ${w} ${r} L ${w} ${h - r} A ${r} ${r} 0 0 1 ${w - r} ${h} L ${r} ${h} A ${r} ${r} 0 0 1 0 ${h - r} L 0 ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`
+  }
+}
+
 // --- Transform string ---
 const transformStr = computed(() =>
   `translate(${graph.view.panX}, ${graph.view.panY}) scale(${graph.view.zoom})`,
@@ -381,11 +414,9 @@ defineExpose({ addNode })
           :transform="`translate(${node.x}, ${node.y})`"
           @mousedown="connectMode ? completeConnect($event, node.id) : startDragNode($event, node.id)"
         >
-          <!-- Node body -->
-          <rect
-            :width="NODE_WIDTH"
-            :height="NODE_HEIGHT"
-            :rx="6"
+          <!-- Node body (shape varies by kind) -->
+          <path
+            :d="nodeShape(node.kind)"
             :fill="NODE_COLORS[node.kind].fill"
             :stroke="NODE_COLORS[node.kind].stroke"
             :stroke-width="2"

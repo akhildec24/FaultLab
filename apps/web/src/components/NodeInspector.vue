@@ -92,6 +92,9 @@ const kindOptions: { value: NodeKind; label: string }[] = [
   { value: 'client', label: 'Client' },
   { value: 'service', label: 'Service' },
   { value: 'database', label: 'Database' },
+  { value: 'queue', label: 'Queue' },
+  { value: 'cache', label: 'Cache' },
+  { value: 'external_api', label: 'External API' },
 ]
 
 const retryStrategyOptions: { value: RetryStrategyType; label: string }[] = [

@@ -151,6 +151,9 @@ const KIND_MAP: Record<string, string> = {
   client: 'client',
   service: 'service',
   database: 'database',
+  queue: 'queue',
+  cache: 'cache',
+  external_api: 'external_api',
 }
 
 const DEFAULT_TRAFFIC: ScenarioTraffic = {
