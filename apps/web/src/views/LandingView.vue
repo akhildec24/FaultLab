@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PRESETS } from '@/graph/presets'
 
-const PRESET_PREVIEW_COUNT = 4
+const PRESET_PREVIEW_COUNT = 6
 const showAllPresets = ref(false)
 const visiblePresets = computed(() =>
   showAllPresets.value ? PRESETS : PRESETS.slice(0, PRESET_PREVIEW_COUNT),
