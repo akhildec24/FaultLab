@@ -14,7 +14,6 @@ import { useAnimationStore } from '@/stores/animation'
 import { validateGraph, graphToScenarioJson } from '@/graph/converter'
 import type { SpeedMultiplier } from '@/graph/animation'
 import { Play, Pause, StepForward, FastForward, RotateCcw, AlertTriangle } from '@lucide/vue'
-import PresetSelector from '@/components/PresetSelector.vue'
 import FailurePanel from '@/components/FailurePanel.vue'
 
 const graph = useGraphStore()
@@ -97,13 +96,10 @@ const simClock = computed(() => {
 
 <template>
   <div class="sim-controls">
-    <!-- Preset selector -->
-    <PresetSelector />
-
     <!-- Validation errors -->
     <div class="sim-controls__errors" v-if="showErrors && !validation.valid">
       <div class="sim-controls__error" v-for="err in validation.errors" :key="err">
-        ⚠ {{ err }}
+        <AlertTriangle :size="16" /> {{ err }}
       </div>
     </div>
 
