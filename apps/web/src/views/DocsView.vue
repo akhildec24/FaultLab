@@ -394,6 +394,20 @@ const presetCount = PRESETS.length
           <li><strong>Social Media Feed</strong> - Timeline fan-out, Memcached, Cassandra</li>
           <li><strong>IoT Telemetry Pipeline</strong> - Device ingestion, stream processor, Kafka, TimescaleDB</li>
         </ul>
+        <h3 class="docs__h3">Industry incidents</h3>
+        <p class="docs__text">
+          Real outages that happened in the industry, recreated as simulation
+          scenarios. Load them to understand how cascading failures propagate
+          in production systems.
+        </p>
+        <ul class="docs__list">
+          <li><strong>AWS S3 Outage (2017)</strong> - A typo in a debugging command took down the S3 billing subsystem, cascading to much of the internet</li>
+          <li><strong>Cloudflare Regex Outage (2019)</strong> - A single WAF regex rule caused exponential backtracking, spiking CPU on every edge server worldwide</li>
+          <li><strong>Knight Capital Trading Failure (2012)</strong> - Old trading code left active during deployment caused $440M in losses in 45 minutes</li>
+          <li><strong>Facebook BGP Outage (2021)</strong> - A BGP route withdrawal made Facebook unreachable for 6 hours, including internal tools</li>
+          <li><strong>GitLab Database Loss (2017)</strong> - An engineer deleted the wrong database directory, losing 300GB of production data</li>
+          <li><strong>Slack DNS Failure (2021)</strong> - A DNS configuration change caused cascading timeouts across the entire microservice mesh</li>
+        </ul>
         <div class="docs__callout">
           Open the <RouterLink to="/editor">editor</RouterLink> and select a
           preset from the dropdown to load it instantly.
@@ -501,7 +515,7 @@ const presetCount = PRESETS.length
 .docs__sidebar-title {
   font-size: var(--fl-size-19);
   margin-bottom: var(--fl-space-3);
-  color: var(--fl-grey-1);
+  color: var(--fl-text);
 }
 
 .docs__nav {
@@ -556,11 +570,13 @@ const presetCount = PRESETS.length
   margin-bottom: var(--fl-space-3);
   padding-bottom: var(--fl-space-2);
   border-bottom: 2px solid var(--fl-border);
+  color: var(--fl-text);
 }
 
 .docs__h3 {
   font-size: var(--fl-size-19);
   margin: var(--fl-space-4) 0 var(--fl-space-2);
+  color: var(--fl-text);
 }
 
 .docs__text {
@@ -632,6 +648,7 @@ const presetCount = PRESETS.length
   font-weight: 700;
   font-size: var(--fl-size-19);
   display: block;
+  color: var(--fl-text);
 }
 
 .docs__node-shape {

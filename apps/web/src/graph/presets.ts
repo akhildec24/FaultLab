@@ -12,6 +12,7 @@ export interface PresetScenario {
   id: string
   name: string
   description: string
+  category?: string
   nodes: Omit<GraphNode, 'id'>[]
   edges: Omit<GraphEdge, 'id' | 'from' | 'to'>[]
   connections: [number, number][] // indices into nodes array
@@ -22,6 +23,7 @@ export const OVERLOADED_DATABASE: PresetScenario = {
   id: 'overloaded-database',
   name: 'Overloaded Database',
   description: 'A client sends traffic through a service to a database with low capacity. Watch requests queue and time out under load.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -81,6 +83,7 @@ export const CASCADING_FAILURE: PresetScenario = {
   id: 'cascading-failure',
   name: 'Cascading Failure',
   description: 'Two services share a single database. When the database slows down, both services queue up and fail.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -172,6 +175,7 @@ export const NETWORK_PARTITION: PresetScenario = {
   id: 'network-partition',
   name: 'Network Partition',
   description: 'A client connects to a service through a lossy network. 20% packet loss causes retries and timeouts.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -231,6 +235,7 @@ export const RETRY_STORM: PresetScenario = {
   id: 'retry-storm',
   name: 'Retry Storm',
   description: 'A client retries aggressively against a service with 30% error rate. Immediate retries with no budget amplify load — watch retries skyrocket and the service collapse.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -290,6 +295,7 @@ export const QUEUE_OVERFLOW: PresetScenario = {
   id: 'queue-overflow',
   name: 'Queue Overflow',
   description: 'A high-traffic client overwhelms a low-capacity service with a small queue. Watch requests get shedded and dequeued as capacity frees up.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -349,6 +355,7 @@ export const CACHE_REPLICATION: PresetScenario = {
   id: 'cache-replication',
   name: 'Cache & Replication',
   description: 'A cache layer with 60% hit rate fronts a leader database with a replica. Watch cache hits skip the DB, and stale reads from the replica due to replication lag.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -424,6 +431,7 @@ export const REPLICATION_DELAY: PresetScenario = {
   id: 'replication-delay',
   name: 'Replication Delay',
   description: 'A leader database replicates writes to a read replica with 500ms lag. Read-heavy traffic hits the replica and sees stale data — watch consistency issues unfold.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -516,6 +524,7 @@ export const MICROSERVICE_MESH: PresetScenario = {
   id: 'microservice-mesh',
   name: 'Microservice Mesh',
   description: 'A client calls an API gateway, which fans out to three services. Each service has different capacity and latency. Watch how bottlenecked services cause cascading delays.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -625,6 +634,7 @@ export const THUNDERING_HERD: PresetScenario = {
   id: 'thundering-herd',
   name: 'Thundering Herd',
   description: 'A sudden traffic spike hits a service with a cold cache. All requests miss the cache and hit the database simultaneously. Watch the DB get overwhelmed until the cache warms up.',
+  category: 'Failure Patterns',
   nodes: [
     {
       kind: 'client',
@@ -684,6 +694,7 @@ export const ECOMMERCE_CHECKOUT: PresetScenario = {
   id: 'ecommerce-checkout',
   name: 'E-Commerce Checkout',
   description: 'A realistic checkout flow: Web client → API Gateway → Cart Service → Payment Service + Inventory Service → Order Service → Postgres. Watch how payment latency bottlenecks the entire pipeline.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -809,6 +820,7 @@ export const STREAMING_CDN: PresetScenario = {
   id: 'streaming-cdn',
   name: 'Streaming CDN',
   description: 'A Netflix-style architecture: Mobile client → CDN Edge → Load Balancer → Origin Service → Redis Cache + S3 Storage. Cache misses fall through to S3 with high latency.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -916,6 +928,7 @@ export const BANKING_TRANSACTION: PresetScenario = {
   id: 'banking-transaction',
   name: 'Banking Transaction',
   description: 'A banking flow: ATM client → Core Banking API → Fraud Detection + Transaction Service → Leader DB with Replica. Fraud service has high latency and error rate, causing timeouts.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -1024,6 +1037,7 @@ export const RIDE_SHARING: PresetScenario = {
   id: 'ride-sharing',
   name: 'Ride-Sharing Dispatch',
   description: 'Uber-style architecture: Mobile client → Dispatch Gateway → Location Service + Driver Matching + Surge Pricing → Redis + MongoDB. High traffic surge overwhelms driver matching.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -1149,6 +1163,7 @@ export const SOCIAL_FEED: PresetScenario = {
   id: 'social-feed',
   name: 'Social Media Feed',
   description: 'Twitter/X-style: Mobile client → API Gateway → Timeline Service → Cache + Trending Service → Cassandra. Fan-out to millions of timelines causes cache stampede on trending topics.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -1273,6 +1288,7 @@ export const IOT_PIPELINE: PresetScenario = {
   id: 'iot-pipeline',
   name: 'IoT Telemetry Pipeline',
   description: 'IoT devices send telemetry through an ingestion service to a stream processor, then to Kafka and TimescaleDB. High device count with small payloads tests backpressure handling.',
+  category: 'Real-World',
   nodes: [
     {
       kind: 'client',
@@ -1391,6 +1407,478 @@ export const IOT_PIPELINE: PresetScenario = {
   connections: [[0, 1], [1, 2], [1, 3], [2, 4], [2, 5], [5, 6]],
 }
 
+/** AWS S3 outage Feb 2017 — a typo caused a cascading failure in the S3 billing system. */
+export const AWS_S3_OUTAGE_2017: PresetScenario = {
+  id: 'aws-s3-outage-2017',
+  name: 'AWS S3 Outage (2017)',
+  description: 'On Feb 28, 2017, a typo in a debugging command on the S3 billing subsystem took down a large portion of the internet. A single high-capacity service depended on by many clients failed, cascading to all downstream services.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Web Apps',
+      x: 40, y: 200,
+      capacity: 300, latency_ms: 5, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 500,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'S3 API Gateway',
+      x: 280, y: 200,
+      capacity: 200, latency_ms: 20, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 300,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.3, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Billing Service',
+      x: 520, y: 120,
+      capacity: 5, latency_ms: 50, error_rate: 0.8, timeout_ms: 2000,
+      queue_limit: 10,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Index Service',
+      x: 520, y: 280,
+      capacity: 50, latency_ms: 30, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 100,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Metadata DB',
+      x: 760, y: 200,
+      capacity: 30, latency_ms: 40, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 50,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'leader',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 15, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 15, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 20, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [2, 4], [3, 4]],
+}
+
+/** Cloudflare outage July 2019 — a bad regex caused CPU spike on all edge servers. */
+export const CLOUDFLARE_REGEX_2019: PresetScenario = {
+  id: 'cloudflare-regex-2019',
+  name: 'Cloudflare Regex Outage (2019)',
+  description: 'On July 2, 2019, a single WAF regex rule caused catastrophic CPU usage on every Cloudflare edge server worldwide. A pattern that caused exponential backtracking brought down the entire CDN.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Global Traffic',
+      x: 40, y: 200,
+      capacity: 500, latency_ms: 2, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 1000,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.3, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Edge Server',
+      x: 280, y: 200,
+      capacity: 10, latency_ms: 500, error_rate: 0.5, timeout_ms: 5000,
+      queue_limit: 20,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'WAF Engine',
+      x: 520, y: 200,
+      capacity: 5, latency_ms: 2000, error_rate: 0.6, timeout_ms: 5000,
+      queue_limit: 10,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'cache',
+      label: 'Edge Cache',
+      x: 520, y: 60,
+      capacity: 100, latency_ms: 1, error_rate: 0, timeout_ms: 1000,
+      queue_limit: 200,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Origin Server',
+      x: 760, y: 200,
+      capacity: 50, latency_ms: 30, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 100,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 50, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [3, 4]],
+}
+
+/** Knight Capital outage Aug 2012 — deployment error caused runaway trading algorithm. */
+export const KNIGHT_CAPITAL_2012: PresetScenario = {
+  id: 'knight-capital-2012',
+  name: 'Knight Capital Trading Failure (2012)',
+  description: 'On Aug 1, 2012, a deployment error left old trading code active on 8 servers. The algorithm bought high and sold low, processing 4M trades in 45 minutes. Knight Capital lost $440M and went bankrupt.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Market Data Feed',
+      x: 40, y: 200,
+      capacity: 1000, latency_ms: 1, error_rate: 0, timeout_ms: 1000,
+      queue_limit: 2000,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Trading Engine (Old Code)',
+      x: 300, y: 200,
+      capacity: 500, latency_ms: 2, error_rate: 0, timeout_ms: 500,
+      queue_limit: 1000,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Risk Manager (Bypassed)',
+      x: 560, y: 120,
+      capacity: 100, latency_ms: 100, error_rate: 0.9, timeout_ms: 500,
+      queue_limit: 50,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Order Router',
+      x: 560, y: 280,
+      capacity: 800, latency_ms: 1, error_rate: 0, timeout_ms: 500,
+      queue_limit: 500,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'external_api',
+      label: 'Stock Exchange',
+      x: 820, y: 200,
+      capacity: 200, latency_ms: 5, error_rate: 0, timeout_ms: 2000,
+      queue_limit: 100,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'reject',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 1, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 1, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 1, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [3, 4]],
+}
+
+/** Facebook outage Oct 2021 — BGP route withdrawal caused DNS failure, cascading to all services. */
+export const FACEBOOK_BGP_2021: PresetScenario = {
+  id: 'facebook-bgp-2021',
+  name: 'Facebook BGP Outage (2021)',
+  description: 'On Oct 4, 2021, a BGP route update withdrew DNS routes, making Facebook unreachable worldwide for 6 hours. Engineers could not access internal tools because they also relied on DNS. A cascading dependency failure.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Users Worldwide',
+      x: 40, y: 200,
+      capacity: 500, latency_ms: 5, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 1000,
+      retry_policy: { strategy: 'exponential', max_retries: 5, jitter: 0.3, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'DNS Resolver',
+      x: 280, y: 200,
+      capacity: 5, latency_ms: 3000, error_rate: 0.9, timeout_ms: 5000,
+      queue_limit: 10,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'BGP Router',
+      x: 520, y: 200,
+      capacity: 3, latency_ms: 5000, error_rate: 0.95, timeout_ms: 10000,
+      queue_limit: 5,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Load Balancer',
+      x: 520, y: 60,
+      capacity: 100, latency_ms: 10, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 200,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Internal Tools',
+      x: 520, y: 340,
+      capacity: 50, latency_ms: 50, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 100,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Core Database',
+      x: 760, y: 200,
+      capacity: 200, latency_ms: 20, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 300,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'leader',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [1, 4], [3, 5]],
+}
+
+/** GitLab database outage Jan 2017 — engineer deleted the wrong database directory, losing production data. */
+export const GITLAB_DB_DELETION_2017: PresetScenario = {
+  id: 'gitlab-db-deletion-2017',
+  name: 'GitLab Database Loss (2017)',
+  description: 'On Jan 31, 2017, an engineer ran rm -rf on the wrong database directory during recovery from a spam attack. Primary DB, replicas, and backups were all affected. 300GB of production data lost, 5GB unrecoverable.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'GitLab Users',
+      x: 40, y: 200,
+      capacity: 200, latency_ms: 5, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 500,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Rails App',
+      x: 280, y: 200,
+      capacity: 100, latency_ms: 30, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 200,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Primary DB (Deleted)',
+      x: 520, y: 120,
+      capacity: 1, latency_ms: 10000, error_rate: 0.99, timeout_ms: 5000,
+      queue_limit: 1,
+      retry_policy: { strategy: 'immediate', max_retries: 0, jitter: 0, budget: null },
+      shed_policy: 'reject',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Replica (Stale)',
+      x: 520, y: 280,
+      capacity: 20, latency_ms: 50, error_rate: 0.3, timeout_ms: 3000,
+      queue_limit: 50,
+      retry_policy: { strategy: 'exponential', max_retries: 1, jitter: 0.1, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'replica',
+      replication_lag_ms: 5000,
+    },
+    {
+      kind: 'database',
+      label: 'Backup (S3)',
+      x: 760, y: 200,
+      capacity: 10, latency_ms: 500, error_rate: 0.5, timeout_ms: 10000,
+      queue_limit: 20,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.3, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 15, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 15, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 100, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 20, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [2, 4], [3, 4]],
+}
+
+/** Slack outage Jan 2021 — DNS configuration change caused cascading failure across microservices. */
+export const SLACK_DNS_2021: PresetScenario = {
+  id: 'slack-dns-2021',
+  name: 'Slack DNS Failure (2021)',
+  description: 'On Jan 4, 2021, a DNS configuration change caused Slack to be unavailable for several hours. Microservices could not find each other, causing cascading timeouts across the entire service mesh.',
+  category: 'Industry Incidents',
+  nodes: [
+    {
+      kind: 'client',
+      label: 'Slack Clients',
+      x: 40, y: 200,
+      capacity: 300, latency_ms: 5, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 500,
+      retry_policy: { strategy: 'exponential', max_retries: 5, jitter: 0.3, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'API Gateway',
+      x: 260, y: 200,
+      capacity: 150, latency_ms: 10, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 300,
+      retry_policy: { strategy: 'exponential', max_retries: 2, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'DNS Service',
+      x: 480, y: 60,
+      capacity: 5, latency_ms: 2000, error_rate: 0.8, timeout_ms: 5000,
+      queue_limit: 10,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Message Service',
+      x: 480, y: 200,
+      capacity: 100, latency_ms: 20, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 200,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'service',
+      label: 'Channel Service',
+      x: 480, y: 340,
+      capacity: 80, latency_ms: 15, error_rate: 0, timeout_ms: 3000,
+      queue_limit: 150,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'database',
+      label: 'Message DB',
+      x: 700, y: 200,
+      capacity: 50, latency_ms: 30, error_rate: 0, timeout_ms: 5000,
+      queue_limit: 100,
+      retry_policy: { strategy: 'exponential', max_retries: 3, jitter: 0.2, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'leader',
+      replication_lag_ms: 0,
+    },
+    {
+      kind: 'cache',
+      label: 'Redis Cache',
+      x: 700, y: 60,
+      capacity: 200, latency_ms: 2, error_rate: 0, timeout_ms: 1000,
+      queue_limit: 300,
+      retry_policy: { strategy: 'immediate', max_retries: 1, jitter: 0, budget: null },
+      shed_policy: 'drop',
+      replication_role: 'standalone',
+      replication_lag_ms: 0,
+    },
+  ],
+  edges: [
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 2, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 10, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+    { latency_ms: 5, packet_loss: 0, bandwidth_rps: 0 },
+  ],
+  connections: [[0, 1], [1, 2], [1, 3], [1, 4], [3, 5], [3, 6]],
+}
+
 export const PRESETS: PresetScenario[] = [
   OVERLOADED_DATABASE,
   CASCADING_FAILURE,
@@ -1407,6 +1895,12 @@ export const PRESETS: PresetScenario[] = [
   RIDE_SHARING,
   SOCIAL_FEED,
   IOT_PIPELINE,
+  AWS_S3_OUTAGE_2017,
+  CLOUDFLARE_REGEX_2019,
+  KNIGHT_CAPITAL_2012,
+  FACEBOOK_BGP_2021,
+  GITLAB_DB_DELETION_2017,
+  SLACK_DNS_2021,
 ]
 
 /**

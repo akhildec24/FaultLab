@@ -9,6 +9,7 @@ import EventTimeline from '@/components/EventTimeline.vue'
 import Dashboard from '@/components/Dashboard.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import StoragePanel from '@/components/StoragePanel.vue'
+import PresetBrowser from '@/components/PresetBrowser.vue'
 import PresenceBar from '@/components/PresenceBar.vue'
 import PeerCursors from '@/components/PeerCursors.vue'
 import { useGraphStore } from '@/stores/graph'
@@ -17,7 +18,7 @@ import { useAnimationStore } from '@/stores/animation'
 import { useCollab } from '@/collab/useCollab'
 import { generateLargeScenario, PRESETS } from '@/graph/presets'
 import type { NodeKind } from '@/graph/types'
-import { Zap, AlertTriangle, X, Link, FolderOpen, ChevronDown, ChevronUp } from '@lucide/vue'
+import { Zap, AlertTriangle, X, Link, FolderOpen, ChevronDown, ChevronUp, LayoutGrid } from '@lucide/vue'
 
 const route = useRoute()
 const graph = useGraphStore()
@@ -30,6 +31,7 @@ const graphEditorRef = ref<InstanceType<typeof GraphEditor> | null>(null)
 const showTimeline = ref(true)
 const bottomTab = ref<'timeline' | 'dashboard' | 'code'>('timeline')
 const showStorage = ref(false)
+const showPresets = ref(false)
 const showCollab = ref(false)
 
 function addNode(kind: NodeKind): void {
@@ -139,6 +141,9 @@ onUnmounted(() => {
         </span>
       </div>
       <div class="graph-toolbar__group graph-toolbar__group--right">
+        <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="showPresets = true">
+          <LayoutGrid :size="16" /> Scenarios
+        </button>
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="toggleCollab">
           <template v-if="collab.status.value === 'connected'"><X :size="16" /> Leave</template>
           <template v-else><Link :size="16" /> Collaborate</template>
@@ -219,6 +224,8 @@ onUnmounted(() => {
         <CodeEditor v-else />
       </div>
     </div>
+    <!-- Preset browser overlay -->
+    <PresetBrowser v-if="showPresets" @close="showPresets = false" />
     <!-- Bottom panel toggle -->
     <button class="bottom-toggle" @click="showTimeline = !showTimeline">
       <ChevronDown v-if="showTimeline" :size="16" />
