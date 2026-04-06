@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PRESETS } from '@/graph/presets'
+
+const PRESET_PREVIEW_COUNT = 4
+const showAllPresets = ref(false)
+const visiblePresets = computed(() =>
+  showAllPresets.value ? PRESETS : PRESETS.slice(0, PRESET_PREVIEW_COUNT),
+)
 
 const components = [
   { name: 'Client', desc: 'Generates traffic at a configurable rate.', tag: 'Source', icon: 'C' },
@@ -179,11 +186,11 @@ const scenarioColors: Record<string, string> = {
       <div class="fl-container">
         <h2 class="landing__heading">Preset scenarios</h2>
         <p class="landing__subheading">
-          {{ PRESETS.length }} ready-to-run scenarios. Load one in the editor and press Run.
+          {{ PRESETS.length }} ready-to-run scenarios modelled on real-world systems. Load one in the editor and press Run.
         </p>
         <div class="landing__presets">
           <RouterLink
-            v-for="p in PRESETS"
+            v-for="p in visiblePresets"
             :key="p.id"
             :to="{ path: '/editor', query: { preset: p.id } }"
             class="landing__preset"
@@ -193,6 +200,11 @@ const scenarioColors: Record<string, string> = {
             <p>{{ p.description }}</p>
             <span class="landing__preset-cta">Open in editor →</span>
           </RouterLink>
+        </div>
+        <div class="landing__presets-more" v-if="!showAllPresets">
+          <button class="fl-button fl-button--secondary" @click="showAllPresets = true">
+            Show all {{ PRESETS.length }} scenarios
+          </button>
         </div>
       </div>
     </section>
@@ -559,6 +571,12 @@ const scenarioColors: Record<string, string> = {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--fl-space-3);
+}
+
+.landing__presets-more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--fl-space-4);
 }
 
 .landing__preset {
