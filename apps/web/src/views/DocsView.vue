@@ -1,259 +1,637 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { PRESETS } from '@/graph/presets'
 
-const guides = [
-  {
-    title: 'Getting Started',
-    desc: 'Load a preset, run a simulation, and read the results in under 2 minutes.',
-    steps: [
-      'Open the Editor and pick a preset from the dropdown',
-      'Click Run to start the simulation — traffic flows through your topology',
-      'Watch the status bar for live clock, pending events, and metrics',
-      'Expand the Timeline panel to see every event as it fires',
-      'Use Step to advance one event at a time for detailed analysis',
-    ],
-  },
-  {
-    title: 'Building Your Own Topology',
-    desc: 'Add nodes, connect them, and configure each component.',
-    steps: [
-      'Use the toolbar buttons to add Clients, Services, Databases, Queues, Caches, and External APIs',
-      'Click a node to select it — the inspector panel shows all properties',
-      'Drag the amber handle on any node to draw a connection to another',
-      'Adjust capacity, latency, error rate, timeout, retry policy, and queue limits per node',
-      'Click Run when your graph is ready — validation warnings will show if something is missing',
-    ],
-  },
-  {
-    title: 'Injecting Failures',
-    desc: 'Break things mid-simulation to see how your system degrades.',
-    steps: [
-      'Start a simulation with any preset or custom topology',
-      'Use the Failure panel next to the metrics to choose a failure type',
-      'Crash a node to take it offline, or Recover to bring it back',
-      'Add latency to a node to simulate slow responses',
-      'Disconnect a link to simulate a network partition',
-      'Reduce capacity to stress-test a bottleneck',
-    ],
-  },
-  {
-    title: 'Importing & Exporting',
-    desc: 'Save your work, share scenarios, and import existing topologies.',
-    steps: [
-      'Click the Storage button in the toolbar to open the storage panel',
-      'Use Export to download your current topology as a JSON file',
-      'Use Import to load a previously exported FaultLab scenario',
-      'Scenarios auto-save to your browser via IndexedDB',
-      'Take manual snapshots to capture and restore points in time',
-    ],
-  },
-  {
-    title: 'Reading the Timeline',
-    desc: 'Understand what happens inside your system, event by event.',
-    steps: [
-      'Expand the bottom panel and switch to the Timeline tab',
-      'Each row shows the virtual time, event type, and affected node',
-      'Use the filter boxes to narrow by node ID, event type, or request ID',
-      'Click Step to advance one event and watch the cascade unfold',
-      'Colour-coded badges show success (green), failure (red), and timeout (amber)',
-    ],
-  },
-  {
-    title: 'Keyboard Shortcuts',
-    desc: 'Move faster in the editor with these shortcuts.',
-    steps: [
-      'Hold Space — grab cursor, drag to pan the canvas from anywhere',
-      'Scroll — zoom in and out toward the cursor',
-      'Delete / Backspace — remove the selected node or edge',
-      'Escape — cancel connection mode or clear selection',
-      'Click amber handle — start a connection from that node',
-    ],
-  },
+const activeSection = ref('getting-started')
+
+const sections = [
+  { id: 'getting-started', label: 'Getting Started' },
+  { id: 'node-types', label: 'Node Types' },
+  { id: 'building-topologies', label: 'Building Topologies' },
+  { id: 'running-simulations', label: 'Running Simulations' },
+  { id: 'injecting-failures', label: 'Injecting Failures' },
+  { id: 'metrics-dashboard', label: 'Metrics & Dashboard' },
+  { id: 'reading-timeline', label: 'Reading the Timeline' },
+  { id: 'importing-exporting', label: 'Importing & Exporting' },
+  { id: 'preset-scenarios', label: 'Preset Scenarios' },
+  { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts' },
+  { id: 'configuration', label: 'Configuration Reference' },
+  { id: 'under-the-hood', label: 'Under the Hood' },
 ]
+
+function scrollTo(id: string): void {
+  activeSection.value = id
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 const nodeTypes = [
-  { name: 'Client', icon: 'C', color: '#f59e0b', shape: 'Pill', desc: 'Generates traffic at a configurable rate. Every simulation needs at least one.' },
-  { name: 'Service', icon: 'S', color: '#6366f1', shape: 'Rounded rect', desc: 'Processes requests with capacity, latency, and retry policies. The workhorse.' },
-  { name: 'Database', icon: 'D', color: '#059669', shape: 'Cylinder', desc: 'Stores data with configurable query capacity and latency. Supports leader/replica.' },
-  { name: 'Queue', icon: 'Q', color: '#ec4899', shape: 'Parallelogram', desc: 'Buffers messages between services. Overflows when the queue limit is reached.' },
-  { name: 'Cache', icon: '$', color: '#ea580c', shape: 'Hexagon', desc: 'Fast lookup layer with low latency and high capacity. Misses forward to origin.' },
-  { name: 'External API', icon: 'E', color: '#64748b', shape: 'Cloud', desc: 'Third-party service outside your control. High latency and error rate by default.' },
+  { name: 'Client', icon: 'C', color: '#f59e0b', shape: 'Pill', desc: 'Generates traffic at a configurable rate. Every simulation needs at least one client node.', defaults: 'Capacity: 100, Latency: 5ms', useCase: 'Web browsers, mobile apps, API callers' },
+  { name: 'Service', icon: 'S', color: '#6366f1', shape: 'Rounded rect', desc: 'Processes requests with capacity, latency, and retry policies. The workhorse.', defaults: 'Capacity: 50, Latency: 20ms, Queue: 100', useCase: 'API servers, microservices, gateways' },
+  { name: 'Database', icon: 'D', color: '#059669', shape: 'Cylinder', desc: 'Stores data with configurable capacity and latency. Supports leader/replica.', defaults: 'Capacity: 20, Latency: 50ms', useCase: 'PostgreSQL, MySQL, MongoDB, Cassandra' },
+  { name: 'Queue', icon: 'Q', color: '#ec4899', shape: 'Parallelogram', desc: 'Buffers messages between services. Overflows when the queue limit is reached.', defaults: 'Capacity: 100, Latency: 3ms, Queue: 500', useCase: 'RabbitMQ, Kafka, SQS, NATS' },
+  { name: 'Cache', icon: '$', color: '#ea580c', shape: 'Hexagon', desc: 'Fast lookup layer with low latency. Misses forward to origin.', defaults: 'Capacity: 150, Latency: 2ms', useCase: 'Redis, Memcached, CDN edge nodes' },
+  { name: 'External API', icon: 'E', color: '#64748b', shape: 'Cloud', desc: 'Third-party service outside your control. High latency and error rate by default.', defaults: 'Capacity: 10, Latency: 100ms, Error: 5%', useCase: 'Payment gateways, SMS, third-party SaaS' },
 ]
 
-const presetCount = 15
+const failureTypes = [
+  { type: 'Crash Node', desc: 'Takes a node offline immediately. All in-flight requests fail.', effect: 'Downstream services see connection errors' },
+  { type: 'Recover Node', desc: 'Brings a crashed node back online.', effect: 'Traffic resumes to the recovered node' },
+  { type: 'Add Latency', desc: 'Adds extra latency to a node, simulating slow responses.', effect: 'Timeouts may trigger, retries may cascade' },
+  { type: 'Add Packet Loss', desc: 'Introduces packet loss on a connection.', effect: 'Random requests fail, retries amplify load' },
+  { type: 'Disconnect Link', desc: 'Severs a connection between two nodes.', effect: 'Network partition, services unreachable' },
+  { type: 'Reconnect Link', desc: 'Restores a disconnected link.', effect: 'Partition heals, traffic resumes' },
+  { type: 'Reduce Capacity', desc: 'Lowers a node\'s processing capacity.', effect: 'Queue builds, latency spikes, timeouts fire' },
+]
+
+const metricsList = [
+  { metric: 'Requests', desc: 'Total requests generated by client nodes since simulation start.' },
+  { metric: 'Success', desc: 'Requests that completed successfully within the timeout window.' },
+  { metric: 'Failed', desc: 'Requests that returned an error or were rejected.' },
+  { metric: 'Timed Out', desc: 'Requests that exceeded their timeout before receiving a response.' },
+  { metric: 'Dropped', desc: 'Requests dropped due to queue overflow or load shedding.' },
+  { metric: 'Avg Latency', desc: 'Average response time across all completed requests (ms).' },
+  { metric: 'P95 Latency', desc: '95th percentile response time. 95% of requests were faster.' },
+  { metric: 'Queue Depth', desc: 'Current requests waiting in node queues. High = bottleneck.' },
+]
+
+const configOptions = [
+  { property: 'Capacity', desc: 'Max requests/sec a node can process.', range: '1 - 10000', default: 'Varies' },
+  { property: 'Latency (ms)', desc: 'Base processing time per request.', range: '0 - 60000', default: 'Varies' },
+  { property: 'Error Rate', desc: 'Probability (0-1) a request fails.', range: '0 - 1', default: '0' },
+  { property: 'Timeout (ms)', desc: 'How long a client waits before giving up.', range: '100 - 60000', default: 'Varies' },
+  { property: 'Queue Limit', desc: 'Max requests waiting in queue. Excess are dropped.', range: '0 - 100000', default: 'Varies' },
+  { property: 'Retry Strategy', desc: 'Immediate, Fixed delay, or Exponential backoff.', range: '3 options', default: 'Varies' },
+  { property: 'Max Retries', desc: 'Max retry attempts before giving up.', range: '0 - 20', default: '3' },
+  { property: 'Jitter', desc: 'Random variation on retry timing (0-1).', range: '0 - 1', default: '0.2' },
+  { property: 'Shed Policy', desc: 'Drop, Reject, or Backpressure when queue full.', range: '3 options', default: 'Drop' },
+  { property: 'Replication Role', desc: 'Standalone, Leader (writes), or Replica (reads).', range: '3 options', default: 'Standalone' },
+  { property: 'Replication Lag', desc: 'Delay before writes appear on replica (ms).', range: '0 - 10000', default: '0' },
+  { property: 'Packet Loss', desc: 'Probability a request is lost in transit.', range: '0 - 1', default: '0' },
+  { property: 'Bandwidth (rps)', desc: 'Max rps through a connection. 0 = unlimited.', range: '0 - 100000', default: '0' },
+]
+
+const shortcuts = [
+  { keys: 'Space (hold)', action: 'Grab cursor, drag to pan canvas' },
+  { keys: 'Scroll', action: 'Zoom in/out toward cursor' },
+  { keys: 'Delete / Backspace', action: 'Remove selected node or edge' },
+  { keys: 'Escape', action: 'Cancel connection or clear selection' },
+  { keys: 'Click amber handle', action: 'Start a connection from that node' },
+  { keys: 'Click node', action: 'Select node, show inspector' },
+  { keys: 'Drag node', action: 'Reposition on canvas' },
+]
+
+const presetCount = PRESETS.length
 </script>
 
 <template>
-  <div class="fl-container fl-section">
-    <h1>Documentation</h1>
-    <p class="docs__lede">
-      Learn how to use FaultLab to simulate distributed systems, inject
-      failures, and understand how your architecture behaves under stress.
-    </p>
+  <div class="docs">
+    <!-- Sidebar -->
+    <aside class="docs__sidebar">
+      <h2 class="docs__sidebar-title">Documentation</h2>
+      <nav class="docs__nav">
+        <button
+          v-for="s in sections"
+          :key="s.id"
+          :class="['docs__nav-item', { 'docs__nav-item--active': activeSection === s.id }]"
+          @click="scrollTo(s.id)"
+        >
+          {{ s.label }}
+        </button>
+      </nav>
+    </aside>
 
-    <!-- Quick start -->
-    <h2 class="docs__heading">Guides</h2>
-    <div class="fl-grid fl-grid--2">
-      <div
-        v-for="g in guides"
-        :key="g.title"
-        class="docs__card"
-      >
-        <h3>{{ g.title }}</h3>
-        <p class="docs__card-desc">{{ g.desc }}</p>
-        <ol class="docs__steps">
-          <li v-for="(step, i) in g.steps" :key="i">{{ step }}</li>
+    <!-- Content -->
+    <div class="docs__content">
+      <p class="docs__intro">
+        FaultLab is a browser-based distributed systems simulator. Design
+        architectures, send traffic through them, inject failures, and observe
+        how your system degrades. This documentation covers everything you need
+        to use FaultLab effectively.
+      </p>
+
+      <!-- Getting Started -->
+      <section id="getting-started" class="docs__section">
+        <h2>Getting Started</h2>
+        <p class="docs__text">
+          FaultLab runs entirely in your browser. No installation, no account,
+          no server to set up. Just open the editor and start simulating.
+        </p>
+        <h3 class="docs__h3">Your first simulation</h3>
+        <ol class="docs__list">
+          <li>Open the <RouterLink to="/editor">Editor</RouterLink> page</li>
+          <li>Pick a preset from the dropdown at the top (e.g. "Overloaded Database")</li>
+          <li>Click the <strong>Run</strong> button to start the simulation</li>
+          <li>Watch the status bar for the live simulation clock and metrics</li>
+          <li>Expand the bottom panel to see the <strong>Timeline</strong> of events</li>
+          <li>Click <strong>Step</strong> to advance one event at a time</li>
         </ol>
-      </div>
-    </div>
+        <h3 class="docs__h3">Understanding what you see</h3>
+        <p class="docs__text">
+          When you press Run, the simulation engine generates traffic from
+          client nodes and routes it through your topology. Each request is
+          simulated as a discrete event. The status bar shows live metrics
+          including request count, success/failure rates, and latency
+          percentiles.
+        </p>
+      </section>
 
-    <!-- Node types -->
-    <h2 class="docs__heading">Node Types</h2>
-    <p class="docs__progress">
-      FaultLab supports {{ nodeTypes.length }} node types, each with a distinct
-      shape and colour. Combine them to model any distributed system.
-    </p>
-    <div class="docs__nodes">
-      <div v-for="n in nodeTypes" :key="n.name" class="docs__node">
-        <span class="docs__node-icon" :style="{ background: n.color }">{{ n.icon }}</span>
-        <div class="docs__node-body">
-          <div class="docs__node-header">
-            <span class="docs__node-name">{{ n.name }}</span>
-            <span class="docs__node-shape">{{ n.shape }}</span>
+      <!-- Node Types -->
+      <section id="node-types" class="docs__section">
+        <h2>Node Types</h2>
+        <p class="docs__text">
+          FaultLab supports {{ nodeTypes.length }} node types, each with a
+          distinct shape and colour. Combine them to model any distributed
+          system architecture.
+        </p>
+        <div class="docs__node-grid">
+          <div v-for="n in nodeTypes" :key="n.name" class="docs__node-card">
+            <div class="docs__node-card-header">
+              <span class="docs__node-icon" :style="{ background: n.color }">{{ n.icon }}</span>
+              <div>
+                <span class="docs__node-name">{{ n.name }}</span>
+                <span class="docs__node-shape">{{ n.shape }}</span>
+              </div>
+            </div>
+            <p class="docs__node-desc">{{ n.desc }}</p>
+            <div class="docs__node-meta">
+              <div><strong>Defaults:</strong> {{ n.defaults }}</div>
+              <div><strong>Examples:</strong> {{ n.useCase }}</div>
+            </div>
           </div>
-          <p class="docs__node-desc">{{ n.desc }}</p>
         </div>
-      </div>
+      </section>
+
+      <!-- Building Topologies -->
+      <section id="building-topologies" class="docs__section">
+        <h2>Building Topologies</h2>
+        <p class="docs__text">
+          Build your own system architecture by adding nodes, connecting them,
+          and configuring each component's properties.
+        </p>
+        <h3 class="docs__h3">Adding nodes</h3>
+        <ol class="docs__list">
+          <li>Use the toolbar buttons to add nodes: <strong>+ Client</strong>, <strong>+ Service</strong>, <strong>+ Database</strong>, <strong>+ Queue</strong>, <strong>+ Cache</strong>, <strong>+ External API</strong></li>
+          <li>Each new node appears at the centre of the canvas with default settings</li>
+          <li>Drag nodes to reposition them on the canvas</li>
+          <li>Scroll to zoom in and out</li>
+        </ol>
+        <h3 class="docs__h3">Connecting nodes</h3>
+        <ol class="docs__list">
+          <li>Hover over a node to see an amber circle on its right edge</li>
+          <li>Click and drag from the amber handle to another node to create a connection</li>
+          <li>Connections are directional - traffic flows from source to target</li>
+          <li>Click an edge to select it and edit its properties in the inspector</li>
+        </ol>
+        <h3 class="docs__h3">Configuring nodes</h3>
+        <ol class="docs__list">
+          <li>Click any node to select it - the inspector panel appears on the right</li>
+          <li>Change the node type using the <strong>Type</strong> dropdown</li>
+          <li>Adjust capacity, latency, error rate, timeout, and queue limit</li>
+          <li>Configure retry strategy (Immediate, Fixed, or Exponential backoff)</li>
+          <li>Set shedding policy (Drop, Reject, or Backpressure)</li>
+          <li>For databases, configure replication role (Standalone, Leader, or Replica)</li>
+        </ol>
+        <div class="docs__callout">
+          <strong>Tip:</strong> Every simulation needs at least one Client node
+          to generate traffic. You'll see a validation warning if no client is
+          present.
+        </div>
+      </section>
+
+      <!-- Running Simulations -->
+      <section id="running-simulations" class="docs__section">
+        <h2>Running Simulations</h2>
+        <p class="docs__text">
+          Once your topology is built, run the simulation to see how it behaves
+          under load.
+        </p>
+        <h3 class="docs__h3">Controls</h3>
+        <ul class="docs__list">
+          <li><strong>Run</strong> - Start continuous simulation. Traffic flows until you pause or events are exhausted.</li>
+          <li><strong>Pause</strong> - Stop at the current virtual time. Resume with Run.</li>
+          <li><strong>Step</strong> - Advance one event at a time. Useful for debugging cascading failures.</li>
+          <li><strong>Run 500</strong> - Process 500 events in a batch. Faster than stepping.</li>
+          <li><strong>Reset</strong> - Clear simulation state and return to virtual time zero. Topology is preserved.</li>
+        </ul>
+        <h3 class="docs__h3">Speed control</h3>
+        <p class="docs__text">
+          Use the speed buttons (1x, 2x, 5x, 10x) to control how fast the
+          simulation runs relative to real time. At 1x, one simulation second
+          takes one real second. Higher speeds process events faster.
+        </p>
+        <h3 class="docs__h3">Validation</h3>
+        <p class="docs__text">
+          Before running, FaultLab validates your topology and shows warnings
+          for common issues: no client node, disconnected components, no
+          database in a write-heavy topology, etc. Warnings are advisory.
+        </p>
+      </section>
+
+      <!-- Injecting Failures -->
+      <section id="injecting-failures" class="docs__section">
+        <h2>Injecting Failures</h2>
+        <p class="docs__text">
+          The Failure panel lets you break things mid-simulation to see how
+          your system degrades. This is the core of chaos engineering with
+          FaultLab.
+        </p>
+        <div class="docs__failure-grid">
+          <div v-for="f in failureTypes" :key="f.type" class="docs__failure-card">
+            <h4>{{ f.type }}</h4>
+            <p>{{ f.desc }}</p>
+            <div class="docs__failure-effect"><strong>Effect:</strong> {{ f.effect }}</div>
+          </div>
+        </div>
+        <div class="docs__callout">
+          <strong>Tip:</strong> Try injecting a failure while the simulation is
+          running to see how the system reacts in real time. Crash a database
+          and watch retries cascade, or add latency to a service and watch
+          timeouts fire.
+        </div>
+      </section>
+
+      <!-- Metrics & Dashboard -->
+      <section id="metrics-dashboard" class="docs__section">
+        <h2>Metrics & Dashboard</h2>
+        <p class="docs__text">
+          FaultLab tracks metrics during simulation. The status bar shows a
+          summary, and the Dashboard tab provides detailed charts and node
+          utilisation.
+        </p>
+        <table class="docs__table">
+          <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr v-for="m in metricsList" :key="m.metric">
+              <td><strong>{{ m.metric }}</strong></td>
+              <td>{{ m.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 class="docs__h3">Dashboard features</h3>
+        <ul class="docs__list">
+          <li><strong>Throughput chart</strong> - Requests per second over time</li>
+          <li><strong>Latency percentiles</strong> - P50, P95, and P99 response times</li>
+          <li><strong>Error rate</strong> - Percentage of failed requests over time</li>
+          <li><strong>Queue depth</strong> - Backlog across all nodes</li>
+          <li><strong>Node utilisation</strong> - Per-node capacity usage bar chart</li>
+          <li><strong>Snapshots</strong> - Capture and compare metrics side by side</li>
+        </ul>
+      </section>
+
+      <!-- Reading the Timeline -->
+      <section id="reading-timeline" class="docs__section">
+        <h2>Reading the Timeline</h2>
+        <p class="docs__text">
+          The Timeline tab shows every simulation event as it happens. This is
+          the most detailed view of what's going on inside your system.
+        </p>
+        <h3 class="docs__h3">Event columns</h3>
+        <ul class="docs__list">
+          <li><strong>Time</strong> - Virtual simulation time in milliseconds</li>
+          <li><strong>Type</strong> - Event type (RequestCreated, RequestCompleted, RequestFailed, Timeout, Retry, QueueOverflow, etc.)</li>
+          <li><strong>Node</strong> - Which node the event occurred on</li>
+          <li><strong>Details</strong> - Request ID, origin, destination, success/failure, retry count</li>
+        </ul>
+        <h3 class="docs__h3">Filtering</h3>
+        <p class="docs__text">
+          Use the filter boxes to narrow events: filter by node ID, event type,
+          or search by request ID to trace a single request's journey through
+          the system.
+        </p>
+        <h3 class="docs__h3">Colour coding</h3>
+        <ul class="docs__list">
+          <li><span class="docs__badge docs__badge--success">Green</span> - Successful completion</li>
+          <li><span class="docs__badge docs__badge--fail">Red</span> - Failed request or error</li>
+          <li><span class="docs__badge docs__badge--timeout">Amber</span> - Timed out request</li>
+          <li><span class="docs__badge docs__badge--retry">Blue</span> - Retry attempt</li>
+          <li><span class="docs__badge docs__badge--drop">Purple</span> - Dropped or rejected</li>
+        </ul>
+      </section>
+
+      <!-- Importing & Exporting -->
+      <section id="importing-exporting" class="docs__section">
+        <h2>Importing & Exporting</h2>
+        <p class="docs__text">
+          FaultLab is local-first - your scenarios are saved in your browser
+          via IndexedDB. Export and import as JSON files to share or version
+          control.
+        </p>
+        <h3 class="docs__h3">Storage panel</h3>
+        <p class="docs__text">
+          Click the <strong>Storage</strong> button in the editor toolbar:
+        </p>
+        <ul class="docs__list">
+          <li><strong>New</strong> - Create a blank scenario</li>
+          <li><strong>Save</strong> - Save current scenario to IndexedDB</li>
+          <li><strong>Export</strong> - Download topology as JSON</li>
+          <li><strong>Import</strong> - Upload a JSON file</li>
+          <li><strong>Snapshot</strong> - Capture state for later restoration</li>
+        </ul>
+        <h3 class="docs__h3">Auto-save</h3>
+        <p class="docs__text">
+          Changes are auto-saved to IndexedDB after a 2-second debounce. Close
+          the tab and return later - your scenario will be waiting.
+        </p>
+        <h3 class="docs__h3">JSON format</h3>
+        <pre class="docs__code">{
+  "id": "scenario-1234567890-abc123",
+  "name": "My Architecture",
+  "nodes": [
+    {
+      "id": "node-1",
+      "kind": "client",
+      "label": "Web Browser",
+      "capacity": 100,
+      "latency_ms": 5,
+      "error_rate": 0,
+      "timeout_ms": 5000,
+      "retry_policy": { "strategy": "immediate", "max_retries": 3 },
+      "shed_policy": "drop",
+      "replication_role": "standalone"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "from": "node-1",
+      "to": "node-2",
+      "latency_ms": 10,
+      "packet_loss": 0,
+      "bandwidth_rps": 0
+    }
+  ],
+  "createdAt": 1234567890,
+  "updatedAt": 1234567890
+}</pre>
+      </section>
+
+      <!-- Preset Scenarios -->
+      <section id="preset-scenarios" class="docs__section">
+        <h2>Preset Scenarios</h2>
+        <p class="docs__text">
+          FaultLab ships with {{ presetCount }} ready-to-run preset scenarios
+          modelled on real-world systems.
+        </p>
+        <h3 class="docs__h3">Classic failure patterns</h3>
+        <ul class="docs__list">
+          <li><strong>Overloaded Database</strong> - Client hits a service backed by a low-capacity database</li>
+          <li><strong>Cascading Failure</strong> - Two services share a database; when one fails, both go down</li>
+          <li><strong>Network Partition</strong> - Packet loss between client and service causes timeouts</li>
+          <li><strong>Retry Storm</strong> - Aggressive retries on a failing service amplify load</li>
+          <li><strong>Queue Overflow</strong> - Low-capacity service with small queue demonstrates load shedding</li>
+          <li><strong>Cache & Replication</strong> - Cache layer with leader/replica DB and lag</li>
+          <li><strong>Replication Delay</strong> - Leader/replica with 500ms lag causes stale reads</li>
+          <li><strong>Microservice Mesh</strong> - Six-service mesh with shared dependencies</li>
+          <li><strong>Thundering Herd</strong> - Sudden traffic spike hits a cold cache</li>
+        </ul>
+        <h3 class="docs__h3">Real-world architectures</h3>
+        <ul class="docs__list">
+          <li><strong>E-Commerce Checkout</strong> - Cart, payment, inventory, and order services</li>
+          <li><strong>Streaming CDN</strong> - CDN edge, load balancer, Redis cache, S3 origin</li>
+          <li><strong>Banking Transaction</strong> - ATM, fraud detection, leader/replica DB, audit trail</li>
+          <li><strong>Ride-Sharing Dispatch</strong> - Surge pricing, driver matching, Redis + MongoDB</li>
+          <li><strong>Social Media Feed</strong> - Timeline fan-out, Memcached, Cassandra</li>
+          <li><strong>IoT Telemetry Pipeline</strong> - Device ingestion, stream processor, Kafka, TimescaleDB</li>
+        </ul>
+        <div class="docs__callout">
+          Open the <RouterLink to="/editor">editor</RouterLink> and select a
+          preset from the dropdown to load it instantly.
+        </div>
+      </section>
+
+      <!-- Keyboard Shortcuts -->
+      <section id="keyboard-shortcuts" class="docs__section">
+        <h2>Keyboard Shortcuts</h2>
+        <table class="docs__table">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr v-for="s in shortcuts" :key="s.keys">
+              <td><code>{{ s.keys }}</code></td>
+              <td>{{ s.action }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Configuration Reference -->
+      <section id="configuration" class="docs__section">
+        <h2>Configuration Reference</h2>
+        <p class="docs__text">
+          Every node and connection has configurable properties.
+        </p>
+        <h3 class="docs__h3">Node properties</h3>
+        <table class="docs__table">
+          <thead><tr><th>Property</th><th>Description</th><th>Range</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr v-for="c in configOptions" :key="c.property">
+              <td><strong>{{ c.property }}</strong></td>
+              <td>{{ c.desc }}</td>
+              <td>{{ c.range }}</td>
+              <td>{{ c.default }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 class="docs__h3">Connection properties</h3>
+        <table class="docs__table">
+          <thead><tr><th>Property</th><th>Description</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Latency (ms)</strong></td><td>Network latency added to every request.</td><td>10ms</td></tr>
+            <tr><td><strong>Packet Loss</strong></td><td>Probability (0-1) a request is lost in transit.</td><td>0</td></tr>
+            <tr><td><strong>Bandwidth (rps)</strong></td><td>Max rps through connection. 0 = unlimited.</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Under the Hood -->
+      <section id="under-the-hood" class="docs__section">
+        <h2>Under the Hood</h2>
+        <p class="docs__text">
+          FaultLab separates the simulation engine from the UI. The engine runs
+          in a Web Worker to keep the interface responsive.
+        </p>
+        <table class="docs__table">
+          <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Interface</td><td>Vue 3, TypeScript, Vite, Pinia</td><td>Graph editor, controls, visualisations</td></tr>
+            <tr><td>Worker</td><td>Web Worker</td><td>Keeps simulation off the main thread</td></tr>
+            <tr><td>Engine</td><td>Rust compiled to WebAssembly</td><td>Deterministic discrete-event simulation</td></tr>
+            <tr><td>Collaboration</td><td>Gleam, Erlang/OTP, WebSockets</td><td>Real-time multi-user editing</td></tr>
+            <tr><td>Storage</td><td>IndexedDB, auto-save, snapshots</td><td>Persist scenarios in the browser</td></tr>
+            <tr><td>Deployment</td><td>Docker, Docker Compose, GitHub Actions</td><td>Self-hosted or cloud deployment</td></tr>
+          </tbody>
+        </table>
+        <h3 class="docs__h3">Deterministic simulation</h3>
+        <p class="docs__text">
+          Given the same topology, traffic config, and random seed, the engine
+          produces the same sequence of events every time. This makes it
+          possible to reproduce bugs and share failure scenarios.
+        </p>
+        <h3 class="docs__h3">Discrete-event simulation</h3>
+        <p class="docs__text">
+          Each event has a virtual timestamp. The engine processes events in
+          timestamp order, advancing the virtual clock as it goes. This is more
+          efficient than time-stepped simulation and allows precise control
+          over event ordering.
+        </p>
+      </section>
     </div>
-
-    <!-- Presets -->
-    <h2 class="docs__heading">Preset Scenarios</h2>
-    <p class="docs__progress">
-      FaultLab ships with {{ presetCount }} ready-to-run preset scenarios
-      modelled on real-world systems — from e-commerce checkouts to IoT
-      telemetry pipelines. Open the
-      <RouterLink to="/editor">editor</RouterLink> to try them.
-    </p>
-
-    <!-- Tech stack (kept for reference) -->
-    <h2 class="docs__heading">Under the Hood</h2>
-    <table class="docs__table">
-      <thead>
-        <tr>
-          <th>Layer</th>
-          <th>Technology</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Interface</td><td>Vue 3, TypeScript, Vite, Pinia</td></tr>
-        <tr><td>Simulation engine</td><td>Rust, wasm-bindgen, serde</td></tr>
-        <tr><td>Collaboration</td><td>Gleam, Erlang/OTP, WebSockets</td></tr>
-        <tr><td>Local-first storage</td><td>IndexedDB, auto-save, snapshots</td></tr>
-        <tr><td>Deployment</td><td>Docker, Docker Compose, GitHub Actions</td></tr>
-      </tbody>
-    </table>
   </div>
 </template>
 
 <style scoped>
-.docs__lede {
+.docs {
+  display: flex;
+  gap: var(--fl-space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--fl-space-5) var(--fl-space-4);
+}
+
+.docs__sidebar {
+  flex-shrink: 0;
+  width: 220px;
+  position: sticky;
+  top: var(--fl-space-4);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--fl-space-4) * 2);
+  overflow-y: auto;
+}
+
+.docs__sidebar-title {
   font-size: var(--fl-size-19);
-  color: var(--fl-grey-4);
-  max-width: 640px;
-  margin-bottom: var(--fl-space-5);
+  margin-bottom: var(--fl-space-3);
+  color: var(--fl-grey-1);
 }
 
-.docs__heading {
-  font-size: var(--fl-size-27);
-  margin: var(--fl-space-6) 0 var(--fl-space-4);
-}
-
-.docs__card {
+.docs__nav {
   display: flex;
   flex-direction: column;
-  background: var(--fl-bg-alt);
-  border-left: 3px solid var(--fl-amber);
-  padding: var(--fl-space-4);
-  text-decoration: none;
-  color: inherit;
-  box-shadow: var(--fl-shadow-sm);
-  transition: box-shadow var(--fl-transition), transform var(--fl-transition);
+  gap: 2px;
 }
 
-.docs__card:hover {
-  box-shadow: var(--fl-shadow-md);
-  transform: translateY(-2px);
-}
-
-.docs__card h3 {
-  font-size: var(--fl-size-19);
-  margin-bottom: var(--fl-space-2);
-}
-
-.docs__card p {
+.docs__nav-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: var(--fl-space-2) var(--fl-space-3);
   font-size: var(--fl-size-16);
   color: var(--fl-grey-4);
-  flex: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background var(--fl-transition), color var(--fl-transition);
 }
 
-.docs__card-desc {
+.docs__nav-item:hover {
+  background: var(--fl-bg-alt);
+  color: var(--fl-grey-1);
+}
+
+.docs__nav-item--active {
+  background: var(--fl-amber);
+  color: var(--fl-slate);
+  font-weight: 600;
+}
+
+.docs__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.docs__intro {
+  font-size: var(--fl-size-19);
+  color: var(--fl-grey-4);
+  line-height: 1.6;
+  margin-bottom: var(--fl-space-5);
+  max-width: 720px;
+}
+
+.docs__section {
+  margin-bottom: var(--fl-space-6);
+  scroll-margin-top: var(--fl-space-4);
+}
+
+.docs__section h2 {
+  font-size: var(--fl-size-27);
+  margin-bottom: var(--fl-space-3);
+  padding-bottom: var(--fl-space-2);
+  border-bottom: 2px solid var(--fl-border);
+}
+
+.docs__h3 {
+  font-size: var(--fl-size-19);
+  margin: var(--fl-space-4) 0 var(--fl-space-2);
+}
+
+.docs__text {
+  font-size: var(--fl-size-16);
+  color: var(--fl-grey-4);
+  line-height: 1.7;
+  max-width: 720px;
   margin-bottom: var(--fl-space-3);
 }
 
-.docs__steps {
-  margin: 0;
+.docs__list {
+  margin: 0 0 var(--fl-space-3) 0;
   padding-left: var(--fl-space-4);
   font-size: var(--fl-size-16);
   color: var(--fl-grey-4);
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 720px;
 }
 
-.docs__steps li {
+.docs__list li {
   margin-bottom: var(--fl-space-1);
 }
 
-.docs__nodes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--fl-space-3);
-  margin-bottom: var(--fl-space-5);
+.docs__callout {
+  background: var(--fl-bg-alt);
+  border-left: 3px solid var(--fl-amber);
+  padding: var(--fl-space-3) var(--fl-space-4);
+  margin: var(--fl-space-4) 0;
+  font-size: var(--fl-size-16);
+  color: var(--fl-grey-3);
+  line-height: 1.6;
+  max-width: 720px;
 }
 
-.docs__node {
-  display: flex;
+.docs__node-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--fl-space-3);
+  margin-bottom: var(--fl-space-4);
+}
+
+.docs__node-card {
   background: var(--fl-bg-alt);
-  padding: var(--fl-space-3);
+  padding: var(--fl-space-4);
   border-left: 3px solid var(--fl-amber);
+}
+
+.docs__node-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--fl-space-3);
+  margin-bottom: var(--fl-space-2);
 }
 
 .docs__node-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 14px;
-}
-
-.docs__node-body {
-  flex: 1;
-}
-
-.docs__node-header {
-  display: flex;
-  align-items: center;
-  gap: var(--fl-space-2);
-  margin-bottom: var(--fl-space-1);
+  font-size: 16px;
 }
 
 .docs__node-name {
   font-weight: 700;
-  font-size: var(--fl-size-16);
+  font-size: var(--fl-size-19);
+  display: block;
 }
 
 .docs__node-shape {
@@ -262,17 +640,76 @@ const presetCount = 15
   background: var(--fl-bg);
   padding: 2px 8px;
   border-radius: 4px;
+  display: inline-block;
+  margin-top: 2px;
 }
 
 .docs__node-desc {
   font-size: var(--fl-size-14);
   color: var(--fl-grey-4);
   line-height: 1.5;
+  margin-bottom: var(--fl-space-2);
 }
+
+.docs__node-meta {
+  font-size: var(--fl-size-14);
+  color: var(--fl-grey-3);
+  line-height: 1.6;
+}
+
+.docs__node-meta div {
+  margin-bottom: 2px;
+}
+
+.docs__failure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--fl-space-3);
+  margin-bottom: var(--fl-space-4);
+}
+
+.docs__failure-card {
+  background: var(--fl-bg-alt);
+  padding: var(--fl-space-3) var(--fl-space-4);
+  border-left: 3px solid #ef4444;
+}
+
+.docs__failure-card h4 {
+  font-size: var(--fl-size-16);
+  margin-bottom: var(--fl-space-1);
+}
+
+.docs__failure-card p {
+  font-size: var(--fl-size-14);
+  color: var(--fl-grey-4);
+  line-height: 1.5;
+  margin-bottom: var(--fl-space-2);
+}
+
+.docs__failure-effect {
+  font-size: var(--fl-size-14);
+  color: var(--fl-grey-3);
+}
+
+.docs__badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: var(--fl-size-14);
+  font-weight: 600;
+  color: white;
+}
+
+.docs__badge--success { background: #059669; }
+.docs__badge--fail { background: #dc2626; }
+.docs__badge--timeout { background: #f59e0b; }
+.docs__badge--retry { background: #3b82f6; }
+.docs__badge--drop { background: #8b5cf6; }
 
 .docs__table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: var(--fl-space-4);
 }
 
 .docs__table th,
@@ -280,7 +717,8 @@ const presetCount = 15
   text-align: left;
   padding: var(--fl-space-2) var(--fl-space-3);
   border-bottom: 1px solid var(--fl-border);
-  font-size: var(--fl-size-19);
+  font-size: var(--fl-size-16);
+  vertical-align: top;
 }
 
 .docs__table th {
@@ -288,9 +726,43 @@ const presetCount = 15
   background: var(--fl-bg-alt);
 }
 
-.docs__progress {
-  font-size: var(--fl-size-19);
-  color: var(--fl-grey-4);
-  max-width: 640px;
+.docs__table code {
+  font-family: monospace;
+  font-size: var(--fl-size-14);
+  background: var(--fl-bg-alt);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.docs__code {
+  background: var(--fl-slate);
+  color: #e2e8f0;
+  padding: var(--fl-space-3) var(--fl-space-4);
+  border-radius: 6px;
+  font-size: var(--fl-size-14);
+  line-height: 1.6;
+  overflow-x: auto;
+  margin-bottom: var(--fl-space-4);
+  max-width: 720px;
+}
+
+@media (max-width: 768px) {
+  .docs {
+    flex-direction: column;
+  }
+  .docs__sidebar {
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+  .docs__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--fl-space-1);
+  }
+  .docs__nav-item {
+    font-size: var(--fl-size-14);
+    padding: var(--fl-space-1) var(--fl-space-2);
+  }
 }
 </style>

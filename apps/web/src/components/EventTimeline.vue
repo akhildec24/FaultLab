@@ -157,7 +157,7 @@ function eventDetail(
   if (e.request_id !== undefined) parts.push(`req#${e.request_id}`)
   if (e.node_id) parts.push(e.node_id)
   if (e.origin) parts.push(`from ${e.origin}`)
-  if (e.from && e.to) parts.push(`${e.from}→${e.to}`)
+  if (e.from && e.to) parts.push(`${e.from}->${e.to}`)
   if (e.success !== undefined) parts.push(e.success ? 'success' : 'failed')
   if (e.retry_count !== undefined) parts.push(`retry#${e.retry_count}`)
   if (e.queue_id) parts.push(`queue:${e.queue_id}`)

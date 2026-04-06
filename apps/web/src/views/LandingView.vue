@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PRESETS } from '@/graph/presets'
+import { ArrowRight, ArrowDown } from '@lucide/vue'
 
 const PRESET_PREVIEW_COUNT = 6
 const showAllPresets = ref(false)
@@ -198,7 +199,7 @@ const scenarioColors: Record<string, string> = {
             <div class="landing__preset-bar" :style="{ background: scenarioColors[p.id] || '#f59e0b' }" />
             <h3>{{ p.name }}</h3>
             <p>{{ p.description }}</p>
-            <span class="landing__preset-cta">Open in editor →</span>
+            <span class="landing__preset-cta">Open in editor <ArrowRight :size="14" /></span>
           </RouterLink>
         </div>
         <div class="landing__presets-more" v-if="!showAllPresets">
@@ -221,12 +222,12 @@ const scenarioColors: Record<string, string> = {
             <span class="fl-tag fl-tag--blue">Interface</span>
             Vue 3 + TypeScript
           </div>
-          <div class="landing__stack-arrow">↓</div>
+          <div class="landing__stack-arrow"><ArrowDown :size="20" /></div>
           <div class="landing__stack-layer">
             <span class="fl-tag fl-tag--blue">Worker</span>
             Web Worker (off-main-thread)
           </div>
-          <div class="landing__stack-arrow">↓</div>
+          <div class="landing__stack-arrow"><ArrowDown :size="20" /></div>
           <div class="landing__stack-layer">
             <span class="fl-tag fl-tag--green">Engine</span>
             Rust compiled to WebAssembly
@@ -237,12 +238,12 @@ const scenarioColors: Record<string, string> = {
             <span class="fl-tag fl-tag--yellow">Document</span>
             Automerge CRDT (local-first)
           </div>
-          <div class="landing__stack-arrow">↓</div>
+          <div class="landing__stack-arrow"><ArrowDown :size="20" /></div>
           <div class="landing__stack-layer">
             <span class="fl-tag fl-tag--yellow">Sync</span>
             WebSocket
           </div>
-          <div class="landing__stack-arrow">↓</div>
+          <div class="landing__stack-arrow"><ArrowDown :size="20" /></div>
           <div class="landing__stack-layer">
             <span class="fl-tag fl-tag--yellow">Server</span>
             Gleam + Erlang/OTP

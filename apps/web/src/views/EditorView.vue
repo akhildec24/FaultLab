@@ -17,6 +17,7 @@ import { useAnimationStore } from '@/stores/animation'
 import { useCollab } from '@/collab/useCollab'
 import { generateLargeScenario, PRESETS } from '@/graph/presets'
 import type { NodeKind } from '@/graph/types'
+import { Zap, AlertTriangle, X, Link, FolderOpen, ChevronDown, ChevronUp } from '@lucide/vue'
 
 const route = useRoute()
 const graph = useGraphStore()
@@ -131,18 +132,20 @@ onUnmounted(() => {
           {{ graph.nodeCount }} nodes · {{ graph.edgeCount }} edges
         </span>
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="loadLargeScenario">
-          ⚡ 120 nodes
+          <Zap :size="16" /> 120 nodes
         </button>
         <span v-if="!sim.workerHealthy" class="graph-toolbar__warn">
-          ⚠ Worker recovering…
+          <AlertTriangle :size="16" /> Worker recovering...
         </span>
       </div>
       <div class="graph-toolbar__group graph-toolbar__group--right">
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="toggleCollab">
-          {{ collab.status.value === 'connected' ? '✕ Leave' : '🔗 Collaborate' }}
+          <template v-if="collab.status.value === 'connected'"><X :size="16" /> Leave</template>
+          <template v-else><Link :size="16" /> Collaborate</template>
         </button>
         <button class="fl-button fl-button--secondary graph-toolbar__btn" @click="showStorage = !showStorage">
-          {{ showStorage ? '✕ Close' : '📁 Storage' }}
+          <template v-if="showStorage"><X :size="16" /> Close</template>
+          <template v-else><FolderOpen :size="16" /> Storage</template>
         </button>
       </div>
     </div>
@@ -218,7 +221,9 @@ onUnmounted(() => {
     </div>
     <!-- Bottom panel toggle -->
     <button class="bottom-toggle" @click="showTimeline = !showTimeline">
-      {{ showTimeline ? '▼' : '▲' }} {{ bottomTab === 'timeline' ? 'Timeline' : bottomTab === 'dashboard' ? 'Dashboard' : 'Code' }}
+      <ChevronDown v-if="showTimeline" :size="16" />
+      <ChevronUp v-else :size="16" />
+      {{ bottomTab === 'timeline' ? 'Timeline' : bottomTab === 'dashboard' ? 'Dashboard' : 'Code' }}
     </button>
   </div>
 </template>

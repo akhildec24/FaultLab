@@ -13,6 +13,7 @@ import { useSimulationStore } from '@/stores/simulation'
 import { useAnimationStore } from '@/stores/animation'
 import { validateGraph, graphToScenarioJson } from '@/graph/converter'
 import type { SpeedMultiplier } from '@/graph/animation'
+import { Play, Pause, StepForward, FastForward, RotateCcw, AlertTriangle } from '@lucide/vue'
 import PresetSelector from '@/components/PresetSelector.vue'
 import FailurePanel from '@/components/FailurePanel.vue'
 
@@ -115,7 +116,7 @@ const simClock = computed(() => {
 
     <!-- Sim errors -->
     <div class="sim-controls__errors" v-if="sim.error">
-      <div class="sim-controls__error">⚠ {{ sim.error }}</div>
+      <div class="sim-controls__error"><AlertTriangle :size="16" /> {{ sim.error }}</div>
     </div>
 
     <!-- Buttons -->
@@ -125,34 +126,34 @@ const simClock = computed(() => {
         :disabled="sim.running"
         @click="startSimulation"
       >
-        ▶ Run
+        <Play :size="16" /> Run
       </button>
       <button
         class="fl-button fl-button--secondary sim-controls__btn"
         :disabled="!sim.running"
         @click="pauseSimulation"
       >
-        ❚❚ Pause
+        <Pause :size="16" /> Pause
       </button>
       <button
         class="fl-button fl-button--secondary sim-controls__btn"
         :disabled="sim.running"
         @click="stepSimulation"
       >
-        ⏭ Step
+        <StepForward :size="16" /> Step
       </button>
       <button
         class="fl-button fl-button--secondary sim-controls__btn"
         :disabled="sim.running"
         @click="continueRun"
       >
-        ⏩ Run 500
+        <FastForward :size="16" /> Run 500
       </button>
       <button
         class="fl-button fl-button--warning sim-controls__btn"
         @click="resetSimulation"
       >
-        ↺ Reset
+        <RotateCcw :size="16" /> Reset
       </button>
 
       <div class="sim-controls__speed">

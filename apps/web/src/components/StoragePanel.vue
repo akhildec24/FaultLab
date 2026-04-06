@@ -9,6 +9,18 @@
 import { ref, onMounted } from 'vue'
 import { useGraphStore } from '@/stores/graph'
 import { useStorage } from '@/storage/useStorage'
+import {
+  Wifi,
+  WifiOff,
+  FilePlus,
+  Save,
+  Download,
+  Upload,
+  Camera,
+  ChevronDown,
+  ChevronRight,
+  X,
+} from '@lucide/vue'
 
 const graph = useGraphStore()
 const storage = useStorage(graph.nodes, graph.edges)
@@ -47,7 +59,9 @@ function newScenario(): void {
     <!-- Status bar -->
     <div class="storage-panel__status">
       <span class="storage-panel__indicator" :class="{ 'is-offline': !storage.isOnline.value }">
-        {{ storage.isOnline.value ? '● Online' : '● Offline' }}
+        <Wifi v-if="storage.isOnline.value" :size="14" />
+        <WifiOff v-else :size="14" />
+        {{ storage.isOnline.value ? 'Online' : 'Offline' }}
       </span>
       <span class="storage-panel__scenario-name" v-if="storage.currentScenarioName.value">
         {{ storage.currentScenarioName.value }}
@@ -63,16 +77,16 @@ function newScenario(): void {
     <!-- Action buttons -->
     <div class="storage-panel__actions">
       <button class="storage-btn" @click="newScenario" title="New scenario">
-        + New
+        <FilePlus :size="16" /> New
       </button>
       <button class="storage-btn" @click="storage.save()" title="Save now">
-        💾 Save
+        <Save :size="16" /> Save
       </button>
       <button class="storage-btn" @click="storage.downloadJson()" title="Export JSON">
-        ⬇ Export
+        <Download :size="16" /> Export
       </button>
       <button class="storage-btn" @click="fileInput?.click()" title="Import JSON">
-        ⬆ Import
+        <Upload :size="16" /> Import
       </button>
       <input
         ref="fileInput"
@@ -82,7 +96,7 @@ function newScenario(): void {
         @change="handleFileUpload"
       />
       <button class="storage-btn" @click="storage.takeSnapshot('Manual snapshot')" title="Take snapshot">
-        📸 Snapshot
+        <Camera :size="16" /> Snapshot
       </button>
     </div>
 
@@ -94,7 +108,9 @@ function newScenario(): void {
           class="storage-section__header"
           @click="showScenarios = !showScenarios"
         >
-          {{ showScenarios ? '▼' : '▶' }} Saved Scenarios ({{ storage.savedScenarios.value.length }})
+          <ChevronDown v-if="showScenarios" :size="16" />
+        <ChevronRight v-else :size="16" />
+        Saved Scenarios ({{ storage.savedScenarios.value.length }})
         </button>
         <div class="storage-section__body" v-if="showScenarios">
           <div
@@ -112,7 +128,7 @@ function newScenario(): void {
               @click.stop="storage.deleteSavedScenario(s.id)"
               title="Delete"
             >
-              ✕
+              <X :size="16" />
             </button>
           </div>
           <div class="storage-empty" v-if="storage.savedScenarios.value.length === 0">
@@ -127,7 +143,9 @@ function newScenario(): void {
           class="storage-section__header"
           @click="showHistory = !showHistory"
         >
-          {{ showHistory ? '▼' : '▶' }} History ({{ storage.history.value.length }})
+          <ChevronDown v-if="showHistory" :size="16" />
+        <ChevronRight v-else :size="16" />
+        History ({{ storage.history.value.length }})
         </button>
         <div class="storage-section__body" v-if="showHistory">
           <div

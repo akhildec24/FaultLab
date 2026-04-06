@@ -38,7 +38,7 @@ const edgeOptions = computed(() =>
     id: `${e.from}->${e.to}`,
     from: e.from,
     to: e.to,
-    label: `${nodeLabel(e.from)} → ${nodeLabel(e.to)}`,
+    label: `${nodeLabel(e.from)} -> ${nodeLabel(e.to)}`,
   })),
 )
 

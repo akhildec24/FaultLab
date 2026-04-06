@@ -8,6 +8,7 @@
 
 import { computed } from 'vue'
 import { useGraphStore } from '@/stores/graph'
+import { ArrowRight } from '@lucide/vue'
 
 const graph = useGraphStore()
 
@@ -58,7 +59,7 @@ function deleteEdge(): void {
   <div class="inspector" v-if="edge">
     <div class="inspector__header">
       <div class="inspector__header-left">
-        <span class="inspector__header-icon inspector__header-icon--edge">→</span>
+        <span class="inspector__header-icon inspector__header-icon--edge"><ArrowRight :size="20" /></span>
         <h3 class="inspector__title">Connection</h3>
       </div>
       <button class="fl-button fl-button--warning inspector__delete" @click="deleteEdge">
@@ -68,7 +69,7 @@ function deleteEdge(): void {
 
     <div class="inspector__route">
       <span class="inspector__route-node">{{ fromNode }}</span>
-      <span class="inspector__route-arrow">→</span>
+      <span class="inspector__route-arrow"><ArrowRight :size="16" /></span>
       <span class="inspector__route-node">{{ toNode }}</span>
     </div>
 

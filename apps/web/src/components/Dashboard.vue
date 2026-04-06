@@ -10,6 +10,7 @@
 import { computed, ref } from 'vue'
 import { useSimulationStore } from '@/stores/simulation'
 import type { Metrics } from '@faultlab/simulation-client'
+import { Camera, ArrowRight } from '@lucide/vue'
 
 const sim = useSimulationStore()
 
@@ -149,7 +150,7 @@ function deltaClass(delta: number): string {
           :disabled="!sim.metrics"
           @click="takeSnapshot"
         >
-          📸 Snapshot
+          <Camera :size="16" /> Snapshot
         </button>
         <button
           v-if="snapshots.length > 0"
@@ -312,7 +313,7 @@ function deltaClass(delta: number): string {
       <!-- Comparison -->
       <div class="dashboard__section" v-if="comparison">
         <h4 class="dashboard__section-title">
-          Comparison: {{ comparison.a.label }} → {{ comparison.b.label }}
+          Comparison: {{ comparison.a.label }} <ArrowRight :size="14" /> {{ comparison.b.label }}
         </h4>
         <div class="dashboard__comparison">
           <div class="dashboard__comp-row">
