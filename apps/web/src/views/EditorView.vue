@@ -92,13 +92,6 @@ onUnmounted(() => {
 
 <template>
   <div class="editor-view">
-    <div class="editor-view__header">
-      <h1>Editor</h1>
-      <p class="editor-view__subtitle">
-        Build your topology by adding nodes and connecting them.
-        Drag to reposition, scroll to zoom, click the amber handle to connect.
-      </p>
-    </div>
     <SimulationControls />
     <PresenceBar
       v-if="showCollab"

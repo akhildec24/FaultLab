@@ -19,12 +19,6 @@ import { FlaskConical } from '@lucide/vue'
         </nav>
       </div>
     </div>
-    <div class="fl-header__phase">
-      <div class="fl-container">
-        <span class="fl-tag fl-tag--yellow">Alpha</span>
-        <span class="fl-header__phase-text">This is a development tool — feedback is welcome.</span>
-      </div>
-    </div>
   </header>
 </template>
 
